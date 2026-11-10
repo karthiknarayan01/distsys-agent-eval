@@ -27,3 +27,20 @@ jobs:
         run: ruff check .
       - name: Run tests
         run: python -m pytest -q
+
+  sandbox:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install
+        run: pip install -e ".[dev]"
+      - name: Build the sandbox image
+        run: distsys-eval build-image --tag distsys-agent-eval/sandbox:ci
+      - name: Run the Docker tests against it
+        env:
+          SANDBOX_TEST_IMAGE: distsys-agent-eval/sandbox:ci
+        run: python -m pytest -q -m docker
