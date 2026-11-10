@@ -18,6 +18,7 @@ ECHO_NODE = """\
 package main
 
 import (
+\t"encoding/json"
 \t"log"
 
 \tmaelstrom "github.com/jepsen-io/maelstrom/demo/go"
@@ -26,7 +27,12 @@ import (
 func main() {
 \tn := maelstrom.NewNode()
 \tn.Handle("echo", func(msg maelstrom.Message) error {
-\t\treturn n.Reply(msg, map[string]any{"type": "echo_ok", "echo": "hello"})
+\t\tvar body map[string]any
+\t\tif err := json.Unmarshal(msg.Body, &body); err != nil {
+\t\t\treturn err
+\t\t}
+\t\tbody["type"] = "echo_ok"
+\t\treturn n.Reply(msg, body)
 \t})
 \tif err := n.Run(); err != nil {
 \t\tlog.Fatal(err)
