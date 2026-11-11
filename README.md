@@ -45,6 +45,16 @@ distsys-eval validate --jobs 3          # every task
 distsys-eval validate unique-ids        # one task
 ```
 
+A mutant caught once may still slip past a single run on another day, so each task's `runs` (m)
+is measured rather than guessed. `calibrate` runs the reference and every mutant 20 times each,
+takes the lower 95% bound on how often one run catches each mutant, and sets m to the fewest
+runs that catch every mutant 99% of the time. The counts are kept in each task's
+`calibration.toml`. It runs on demand from the `calibrate` workflow, since it takes about an hour.
+
+```sh
+distsys-eval calibrate --jobs 3 --write    # measure, then write calibration.toml and runs
+```
+
 ## Development
 
 ```sh
