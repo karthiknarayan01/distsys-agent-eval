@@ -1,0 +1,39 @@
+Has the first node mint every ID and the others ask it for one. Correct on a calm network, but a
+node cut off from the leader by a partition can't answer, and the task requires every request to
+be answered.
+
+diff --git a/main.go b/main.go
+index 3ebaafd..a117fa4 100644
+--- a/main.go
++++ b/main.go
+@@ -10,6 +10,7 @@
+ package main
+ 
+ import (
++	"context"
+ 	"encoding/json"
+ 	"hash/fnv"
+ 	"log"
+@@ -34,7 +35,22 @@ func main() {
+ 		// Reply round-trips bodies through map[string]any, where JSON
+ 		// numbers become float64 (53-bit mantissa); a 64-bit integer ID
+ 		// would lose bits. Strings survive intact.
++		// One node mints every ID, so IDs are unique by construction. The others ask it.
+ 		body["type"] = "generate_ok"
++		if leader := n.NodeIDs()[0]; n.ID() != leader {
++			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
++			defer cancel()
++			resp, err := n.SyncRPC(ctx, leader, map[string]any{"type": "generate"})
++			if err != nil {
++				return err
++			}
++			var answer map[string]any
++			if err := json.Unmarshal(resp.Body, &answer); err != nil {
++				return err
++			}
++			body["id"] = answer["id"]
++			return n.Reply(msg, body)
++		}
+ 		body["id"] = strconv.FormatUint(nextID(waitForNodeID(n)), 10)
+ 
+ 		return n.Reply(msg, body)

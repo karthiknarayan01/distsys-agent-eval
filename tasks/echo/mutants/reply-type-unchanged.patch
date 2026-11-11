@@ -1,0 +1,17 @@
+Replies without switching the type to echo_ok, so the client gets back its own request
+instead of an answer.
+
+diff --git a/main.go b/main.go
+index 8753bda..54da693 100644
+--- a/main.go
++++ b/main.go
+@@ -23,9 +23,6 @@ func main() {
+ 			return err
+ 		}
+ 
+-		// Update the message type to return back.
+-		body["type"] = "echo_ok"
+-
+ 		// Echo the original message back with the updated message type.
+ 		return n.Reply(msg, body)
+ 	})

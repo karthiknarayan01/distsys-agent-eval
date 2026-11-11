@@ -1,0 +1,17 @@
+Replaces the node's set on every client broadcast instead of adding to it, so a read returns only
+the latest value.
+
+diff --git a/gossip.go b/gossip.go
+index 9bf0b77..b9fbf60 100644
+--- a/gossip.go
++++ b/gossip.go
+@@ -78,6 +78,9 @@ func numbersFromBody(body map[string]any) []int {
+ // It returns the numbers that were new to us. Caller holds lock.
+ func storeNumbers(sender string, numbers []int) []int {
+ 	newToUs := []int{}
++	if sender != node.ID() && len(numbers) > 0 {
++		hasNumbers[node.ID()] = map[int]struct{}{}
++	}
+ 	for _, m := range numbers {
+ 		numberSet(sender)[m] = struct{}{}
+ 		if _, seen := numberSet(node.ID())[m]; seen {

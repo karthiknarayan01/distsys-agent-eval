@@ -1,0 +1,14 @@
+Leaves the node's ordinal out of the ID, so two nodes minting in the same millisecond with the
+same sequence number hand out the same ID.
+
+diff --git a/main.go b/main.go
+index 3ebaafd..cad6b0f 100644
+--- a/main.go
++++ b/main.go
+@@ -118,5 +118,5 @@ func nextID(nodeID uint64) uint64 {
+ 		lastMS++
+ 	}
+ 
+-	return lastMS<<tsShift | nodeID<<nodeShift | seq
++	return lastMS<<tsShift | seq
+ }

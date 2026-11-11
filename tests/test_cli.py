@@ -66,3 +66,26 @@ def test_grade_refuses_an_unknown_task_or_a_missing_directory(capsys, tmp_path):
     assert main(["grade", "echo", str(tmp_path / "missing")]) == 2
     err = capsys.readouterr().err
     assert "no task 'nope'" in err and "isn't a directory" in err
+
+
+def test_validate_exits_1_when_a_check_comes_out_wrong(monkeypatch, capsys):
+    from distsys_eval.grader import Grade
+    from distsys_eval.sandbox import ExecResult
+    from distsys_eval.validate import Check
+
+    async def fake_validate(tasks, image, jobs):
+        (task,) = tasks
+        from distsys_eval.validate import subjects
+
+        return [Check(subject, Grade("pass", None, ExecResult(0, "", False, False), []))
+                for subject in subjects(task)]
+
+    monkeypatch.setattr("distsys_eval.cli.validate", fake_validate)
+    assert main(["validate", "echo"]) == 1
+    out = capsys.readouterr().out
+    assert "ok     echo/reference" in out and "WRONG" in out
+
+
+def test_validate_refuses_an_unknown_task(capsys):
+    assert main(["validate", "nope"]) == 2
+    assert "no task 'nope'" in capsys.readouterr().err
