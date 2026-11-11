@@ -80,6 +80,26 @@ def test_render():
     ])
 
 
+def test_an_original_and_its_variant_are_set_side_by_side():
+    results = [
+        attempt("unique-ids", 1, "pass"), attempt("unique-ids", 2, "pass"),
+        attempt("unique-ids-variant", 1, "pass"), attempt("unique-ids-variant", 2, "fail", "crashed"),
+        attempt("echo", 1, "pass"),
+    ]
+    report = summarize(results, {"unique-ids-variant": "unique-ids", "g-counter-variant": "g-counter"})
+    assert report.variants == [("unique-ids", "unique-ids-variant")]
+    assert render(report).splitlines()[-3:] == [
+        "originals and their variants",
+        "  original    pass^1  variant             pass^1  change",
+        "  unique-ids  1.00    unique-ids-variant  0.50    -0.50",
+    ]
+    assert as_json(report)["variants"] == [{"original": "unique-ids", "variant": "unique-ids-variant"}]
+
+
+def test_without_variants_there_is_no_comparison():
+    assert "variants" not in render(summarize([attempt("echo", 1, "pass")]))
+
+
 def test_many_attempts_show_k_in_powers_of_two():
     assert table_ks(5) == [1, 2, 3, 4, 5]
     assert table_ks(16) == [1, 2, 4, 8, 16]

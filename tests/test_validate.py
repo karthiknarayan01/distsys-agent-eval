@@ -1,5 +1,5 @@
 """validate: the shipped references and mutants are in order, and checks are judged and
-summarised right. Grading itself is faked here; the CI sandbox job runs the real thing."""
+summarised right. Grading itself is faked here; the validate workflow runs the real thing."""
 
 import asyncio
 import shutil
@@ -11,7 +11,16 @@ from distsys_eval import validate as validate_module
 from distsys_eval.grader import Grade
 from distsys_eval.sandbox import ExecResult
 from distsys_eval.tasks import TASKS_DIR, load_task, load_tasks
-from distsys_eval.validate import Check, Subject, ValidateError, materialize, subjects, summary, validate
+from distsys_eval.validate import (
+    Check,
+    Subject,
+    ValidateError,
+    materialize,
+    rename_in_code,
+    subjects,
+    summary,
+    validate,
+)
 
 ECHO = load_task(TASKS_DIR / "echo")
 BUILT = ExecResult(0, "", False, False)
@@ -38,10 +47,38 @@ def test_every_task_has_a_reference_and_at_least_two_mutants(task):
 )
 def test_every_mutant_applies_and_changes_the_reference(subject, tmp_path):
     materialize(subject, tmp_path / "src")
-    reference = subject.task.path / "reference"
+    reference = tmp_path / "reference"
+    materialize(subjects(subject.task)[0], reference)
     changed = [path.name for path in (tmp_path / "src").iterdir()
                if path.read_bytes() != (reference / path.name).read_bytes()]
     assert changed, "the patch applied but changed nothing"
+
+
+# Variants
+
+
+def test_a_variant_borrows_its_originals_reference_and_mutants():
+    variant = load_task(TASKS_DIR / "unique-ids-variant")
+    original = load_task(TASKS_DIR / "unique-ids")
+    assert [(s.name, s.patch) for s in subjects(variant)] == [(s.name, s.patch) for s in subjects(original)]
+    assert all(s.task == variant for s in subjects(variant))
+
+
+def test_a_variants_code_speaks_its_protocol(tmp_path):
+    variant = load_task(TASKS_DIR / "unique-ids-variant")
+    materialize(subjects(variant)[0], tmp_path / "src")
+    code = "".join(path.read_text() for path in (tmp_path / "src").glob("*.go"))
+    assert '"issue"' in code and '"issued"' in code and '"ticket"' in code
+    assert '"generate"' not in code and '"id"' not in code
+
+
+def test_only_whole_string_literals_are_renamed(tmp_path):
+    (tmp_path / "main.go").write_text('Handle("read", f)\nx := "read_ok"\ny := "already"\n// read\n')
+    (tmp_path / "notes.txt").write_text('"read"')
+    rename_in_code(tmp_path, {"read": "recall", "read_ok": "recalled"})
+    renamed = 'Handle("recall", f)\nx := "recalled"\ny := "already"\n// read\n'
+    assert (tmp_path / "main.go").read_text() == renamed
+    assert (tmp_path / "notes.txt").read_text() == '"read"'
 
 
 def test_the_about_line_is_the_text_before_the_diff():

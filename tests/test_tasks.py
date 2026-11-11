@@ -32,9 +32,10 @@ time-limit = 10
 def test_shipped_tasks_load():
     tasks = load_tasks()
     assert [task.id for task in tasks] == [
-        "broadcast-fault-tolerant", "broadcast-few-messages", "broadcast-low-latency", "broadcast-multi-node",
-        "broadcast-single-node", "echo", "g-counter", "kafka-multi-node", "kafka-single-node",
-        "txn-read-committed", "unique-ids",
+        "broadcast-fault-tolerant", "broadcast-fault-tolerant-variant", "broadcast-few-messages",
+        "broadcast-low-latency", "broadcast-multi-node", "broadcast-single-node", "echo", "g-counter",
+        "g-counter-variant", "kafka-multi-node", "kafka-multi-node-variant", "kafka-single-node",
+        "txn-read-committed", "unique-ids", "unique-ids-variant",
     ]
     assert all(task.runs >= 1 and task.prompt and task.title for task in tasks)
 
@@ -126,6 +127,27 @@ def test_a_task_without_a_rename_tests_its_binary_directly(tmp_path):
     assert "--bin ./node" in task.brief and "maelstrom-rename" not in task.brief
 
 
+def make_variant(root: Path, rename: str) -> Path:
+    """An echo task with a reference, and a variant of it with the given [rename] tables."""
+    (make_task(root) / "reference").mkdir()
+    variant = root / "echo-variant"
+    variant.mkdir()
+    (variant / "task.toml").write_text('variant-of = "echo"\n' + GOOD_TOML + rename)
+    (variant / "prompt.md").write_text("# Say\n\nSay it.")
+    return variant
+
+
+def test_a_variant_names_its_original(tmp_path):
+    variant = make_variant(tmp_path, RENAME.replace('echo = "words"', 'echo = "say"'))
+    assert load_task(variant).variant_of == "echo"
+    assert load_task(tmp_path / "echo").variant_of is None
+
+
+def test_a_variant_cant_give_one_name_two_new_names(tmp_path):
+    with pytest.raises(TaskError, match="must rename echo the same as a type and as a field"):
+        load_task(make_variant(tmp_path, RENAME))
+
+
 def test_targets_load_as_numbers(tmp_path):
     toml = GOOD_TOML + "\n[targets]\nmsgs-per-op = 20\nmax-latency-ms = 2000.5\n"
     task = load_task(make_task(tmp_path, toml))
@@ -147,6 +169,7 @@ def test_targets_load_as_numbers(tmp_path):
         (("runs = 2", "runs = = 2"), "task.toml:"),
         (("runs = 2", "runs = 2\ntargets = 3"), "targets must be a table"),
         (("runs = 2", "runs = 2\nrename = 3"), "rename must be a table"),
+        (("runs = 2", 'runs = 2\nvariant-of = "nope"'), "variant-of must name a task with a reference/"),
         (("[agent]", "[rename]\nnames = {}\n\n[agent]"), "[rename] has unknown keys: names"),
         (("[agent]", "[rename]\ntypes = {}\n\n[agent]"), "[rename] renames nothing"),
         (("[agent]", '[rename.types]\necho = 1\n\n[agent]'), "[rename.types] must map names to names"),

@@ -1,0 +1,32 @@
+title = "Journals across three nodes"
+variant-of = "kafka-multi-node"
+runs = 3
+
+[agent]
+minutes = 45
+steps = 150
+
+[maelstrom]
+workload = "kafka"
+node-count = 3
+concurrency = "2n"
+time-limit = 20
+rate = 1000
+
+[rename.types]
+send = "append"
+send_ok = "appended"
+poll = "fetch"
+poll_ok = "fetched"
+commit_offsets = "bookmark"
+commit_offsets_ok = "bookmarked"
+list_committed_offsets = "bookmarks"
+list_committed_offsets_ok = "bookmarks_are"
+
+[rename.fields]
+key = "journal"
+keys = "journals"
+msg = "entry"
+msgs = "entries"
+offset = "position"
+offsets = "positions"

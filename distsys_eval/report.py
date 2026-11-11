@@ -1,6 +1,6 @@
 """The report: how reliably an agent solved each task, why its attempts failed, and what it spent.
 
-    report = summarize(load(Path("results/qwen/results.jsonl")))
+    report = summarize(load(Path("results/qwen/results.jsonl")), {"unique-ids-variant": "unique-ids"})
     print(render(report))                 a table for the terminal
     json.dumps(as_json(report))           the same numbers for other tools
 
@@ -17,12 +17,16 @@ counted on its own.
 Each failed attempt is given one reason. If the agent was stopped (out of steps, out of time,
 or its reply cut off at the model's output cap), that is the reason, since it never handed in a
 finished program. Otherwise the reason is the grader's category.
+
+A variant is the same problem as its original under new names (tasks.py). When both were run,
+the report sets their pass^1 side by side: an agent that does much worse on the variant was
+likely recalling the public solution rather than solving the problem.
 """
 
 from __future__ import annotations
 
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from math import comb
 from statistics import mean
 from typing import Any
@@ -53,11 +57,13 @@ class AgentReport:
     tasks: list[TaskSummary]
     overall: dict[int, float]  # k -> mean pass^k over tasks, for every k all tasks reach
     failures: Counter[str]
+    variants: list[tuple[str, str]] = field(default_factory=list)  # (original, variant), both run
 
 
-def summarize(results: list[AttemptResult]) -> AgentReport:
+def summarize(results: list[AttemptResult], variant_of: dict[str, str] | None = None) -> AgentReport:
     """The report for one agent's results, tasks in the order they were first recorded.
-    Raises ValueError if the results are empty or come from more than one agent."""
+    `variant_of` maps each variant to its original. Raises ValueError if the results are empty
+    or come from more than one agent."""
     agents = {r.agent for r in results}
     if len(agents) != 1:
         raise ValueError(f"expected one agent's results, found {len(agents)}")
@@ -68,7 +74,11 @@ def summarize(results: list[AttemptResult]) -> AgentReport:
     reach = min(t.attempts for t in tasks)
     overall = {k: mean(t.pass_hat[k] for t in tasks) for k in range(1, reach + 1)}
     failures = sum((t.failures for t in tasks), Counter())
-    return AgentReport(agents.pop(), tasks, overall, failures)
+    variants = [
+        (original, variant) for variant, original in (variant_of or {}).items()
+        if original in by_task and variant in by_task
+    ]
+    return AgentReport(agents.pop(), tasks, overall, failures, variants)
 
 
 def task_summary(task: str, results: list[AttemptResult]) -> TaskSummary:
@@ -120,7 +130,20 @@ def render(report: AgentReport) -> str:
         lines += ["", "why attempts failed"]
         width = max(map(len, report.failures))
         lines += [f"  {reason:<{width}}  {count}" for reason, count in report.failures.most_common()]
+    if report.variants:
+        lines += ["", "originals and their variants"]
+        lines += ["  " + line for line in table(variant_rows(report))]
     return "\n".join(lines)
+
+
+def variant_rows(report: AgentReport) -> list[list[str]]:
+    """A row per original and variant pair: each one's pass^1, and the change from one to the other."""
+    pass_1 = {t.task: t.pass_hat.get(1, 0.0) for t in report.tasks}
+    rows = [["original", "pass^1", "variant", "pass^1", "change"]]
+    for original, variant in report.variants:
+        before, after = pass_1[original], pass_1[variant]
+        rows.append([original, f"{before:.2f}", variant, f"{after:.2f}", f"{after - before:+.2f}"])
+    return rows
 
 
 def table_ks(n: int) -> list[int]:
@@ -151,6 +174,7 @@ def as_json(report: AgentReport) -> dict[str, Any]:
     return {
         "agent": report.agent,
         "overall": {"pass_hat": report.overall, "failures": dict(report.failures)},
+        "variants": [{"original": original, "variant": variant} for original, variant in report.variants],
         "tasks": [
             {
                 "task": t.task, "attempts": t.attempts, "passed": t.passed, "errors": t.errors,

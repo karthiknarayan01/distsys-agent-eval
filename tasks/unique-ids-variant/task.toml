@@ -1,0 +1,23 @@
+title = "Ticket numbers"
+variant-of = "unique-ids"
+runs = 3
+
+[agent]
+minutes = 30
+steps = 100
+
+[maelstrom]
+workload = "unique-ids"
+node-count = 5
+time-limit = 30
+rate = 1000
+concurrency = "2n"
+availability = "total"
+nemesis = "partition"
+
+[rename.types]
+generate = "issue"
+generate_ok = "issued"
+
+[rename.fields]
+id = "ticket"

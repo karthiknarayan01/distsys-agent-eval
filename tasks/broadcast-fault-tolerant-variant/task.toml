@@ -1,0 +1,27 @@
+title = "Rumors through a split network"
+variant-of = "broadcast-fault-tolerant"
+runs = 3
+
+[agent]
+minutes = 45
+steps = 150
+
+[maelstrom]
+workload = "broadcast"
+node-count = 7
+time-limit = 20
+rate = 10
+nemesis = "partition"
+
+[rename.types]
+broadcast = "tell"
+broadcast_ok = "told"
+read = "recall"
+read_ok = "recalled"
+topology = "neighbors"
+topology_ok = "neighbors_noted"
+
+[rename.fields]
+message = "rumor"
+messages = "rumors"
+topology = "neighbors"

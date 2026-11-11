@@ -16,11 +16,18 @@ A mutant is a patch to the reference, starting with a few lines on what the bug 
 for a reason other than not building: a mutant that doesn't compile tests the compiler, not the
 task. A reference that fails means the task asks for more than a correct solution can give; a
 mutant that passes means the task's runs are too short, too calm or too few to catch that bug.
+
+A variant (tasks.py) borrows its original's reference and mutants. Each is set up as for the
+original, and then every Go string literal that is one of the protocol's names is replaced with
+the variant's name for it: "generate" becomes "issue" in a handler, in a reply's type, and in a
+struct tag alike. So a variant is checked with code that speaks its protocol, and a mutant keeps
+its one bug.
 """
 
 from __future__ import annotations
 
 import asyncio
+import re
 import shutil
 import subprocess
 import tempfile
@@ -72,13 +79,15 @@ async def validate(tasks: list[Task], image: str | None = None, jobs: int = 1) -
 
 
 def subjects(task: Task) -> list[Subject]:
-    """The task's reference and its mutants. Raises ValidateError if it has no reference."""
-    if not (task.path / "reference").is_dir():
+    """The task's reference and its mutants, or for a variant its original's. Raises
+    ValidateError if there is no reference."""
+    source = code_dir(task)
+    if not (source / "reference").is_dir():
         raise ValidateError(f"{task.id}: no reference/ directory")
     reference = Subject(task, "reference", "pass", None, "")
     mutants = [
         Subject(task, patch.stem, "fail", patch, about(patch))
-        for patch in sorted((task.path / "mutants").glob("*.patch"))
+        for patch in sorted((source / "mutants").glob("*.patch"))
     ]
     return [reference, *mutants]
 
@@ -91,17 +100,37 @@ async def grade_subject(subject: Subject, image: str | None) -> Grade:
         return await grade_directory(subject.task, source, image)
 
 
+def code_dir(task: Task) -> Path:
+    """Where the task's reference and mutants are: its own directory, or its original's."""
+    return task.path.parent / task.variant_of if task.variant_of else task.path
+
+
 def materialize(subject: Subject, dest: Path) -> None:
-    """Copy the reference to `dest` and, for a mutant, apply its patch there."""
-    shutil.copytree(subject.task.path / "reference", dest)
-    if subject.patch is None:
-        return
+    """Copy the reference to `dest`, apply a mutant's patch there, and for a variant, rename."""
+    shutil.copytree(code_dir(subject.task) / "reference", dest)
+    if subject.patch is not None:
+        apply_patch(subject, dest)
+    rename = subject.task.maelstrom.rename
+    if subject.task.variant_of and rename:
+        rename_in_code(dest, {**rename.types, **rename.fields})
+
+
+def apply_patch(subject: Subject, dest: Path) -> None:
+    """git apply the subject's patch in dest."""
     applied = subprocess.run(
         ["git", "apply", str(subject.patch.resolve())], cwd=dest, capture_output=True, text=True
     )
     if applied.returncode != 0:
         problem = applied.stderr.strip()
         raise ValidateError(f"{subject.task.id}: {subject.patch.name} doesn't apply: {problem}")
+
+
+def rename_in_code(directory: Path, names: dict[str, str]) -> None:
+    """Replace every Go string literal that is exactly one of `names` with its new name, in
+    each .go file under directory."""
+    literal = re.compile('"(' + "|".join(map(re.escape, names)) + ')"')
+    for path in directory.rglob("*.go"):
+        path.write_text(literal.sub(lambda m: f'"{names[m.group(1)]}"', path.read_text()))
 
 
 def about(patch: Path) -> str:

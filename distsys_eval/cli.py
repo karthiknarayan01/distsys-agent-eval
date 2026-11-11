@@ -177,13 +177,14 @@ def run_command(args: argparse.Namespace) -> int:
 
 def report_command(args: argparse.Namespace) -> int:
     """A report for each results directory, as tables or as one JSON list."""
+    variant_of = {task.id: task.variant_of for task in load_tasks(TASKS_DIR) if task.variant_of}
     reports = []
     for directory in args.dirs:
         results = load(directory / RESULTS_FILE)
         if not results:
             print(f"no results in {directory}", file=sys.stderr)
             return 2
-        reports.append(reporting.summarize(results))
+        reports.append(reporting.summarize(results, variant_of))
     if args.json:
         print(json.dumps([reporting.as_json(r) for r in reports], indent=2))
     else:

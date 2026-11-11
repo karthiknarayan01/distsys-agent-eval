@@ -1,0 +1,24 @@
+title = "Visitor tally"
+variant-of = "g-counter"
+runs = 6
+
+[agent]
+minutes = 45
+steps = 150
+
+[maelstrom]
+workload = "g-counter"
+node-count = 4
+time-limit = 20
+rate = 100
+nemesis = "partition"
+
+[rename.types]
+add = "count"
+add_ok = "counted"
+read = "total"
+read_ok = "total_is"
+
+[rename.fields]
+delta = "visitors"
+value = "visitors_so_far"
