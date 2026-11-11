@@ -1,0 +1,15 @@
+Relays a send to the log's owner but also appends the value to its own copy, and answers with
+that copy's offset instead of the owner's.
+
+diff --git a/handlers.go b/handlers.go
+index 4c927b4..c5795d3 100644
+--- a/handlers.go
++++ b/handlers.go
+@@ -31,6 +31,7 @@ func handleSend(msg maelstrom.Message) error {
+ 		if err != nil {
+ 			return err
+ 		}
++		relayed["offset"] = appendLocal(name, int(body["msg"].(float64)))
+ 		return node.Reply(msg, relayed)
+ 	}
+ 

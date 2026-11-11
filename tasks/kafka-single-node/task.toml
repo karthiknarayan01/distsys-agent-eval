@@ -1,0 +1,13 @@
+title = "Kafka-style log"
+runs = 3
+
+[agent]
+minutes = 45
+steps = 150
+
+[maelstrom]
+workload = "kafka"
+node-count = 1
+concurrency = "2n"
+time-limit = 20
+rate = 1000

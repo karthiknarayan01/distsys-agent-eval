@@ -32,7 +32,7 @@ def test_shipped_tasks_load():
     tasks = load_tasks()
     assert [task.id for task in tasks] == [
         "broadcast-fault-tolerant", "broadcast-few-messages", "broadcast-low-latency", "broadcast-multi-node",
-        "broadcast-single-node", "echo", "g-counter", "unique-ids",
+        "broadcast-single-node", "echo", "g-counter", "kafka-multi-node", "kafka-single-node", "unique-ids",
     ]
     assert all(task.runs >= 1 and task.prompt and task.title for task in tasks)
 

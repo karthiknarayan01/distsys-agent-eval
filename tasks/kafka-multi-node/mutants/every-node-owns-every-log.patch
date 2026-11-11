@@ -1,0 +1,17 @@
+Every node treats itself as the owner of every log, so each keeps its own copy and hands out its
+own offsets. The two nodes then give the same offset to different values.
+
+diff --git a/ownership.go b/ownership.go
+index 382ac70..136e4c9 100644
+--- a/ownership.go
++++ b/ownership.go
+@@ -26,7 +26,8 @@ func waitForInit() {
+ func ownerOf(name string) string {
+ 	ids := append([]string{}, node.NodeIDs()...)
+ 	sort.Strings(ids)
+-	return ids[fnv32(name)%uint32(len(ids))]
++	_ = ids
++	return node.ID()
+ }
+ 
+ func fnv32(name string) uint32 {

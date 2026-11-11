@@ -1,0 +1,20 @@
+Relays a poll for another node's logs without the offsets the client asked for, so the owner
+answers from the start of each log and the client gets values before the offset it asked for.
+
+diff --git a/handlers.go b/handlers.go
+index 4c927b4..ad59c0f 100644
+--- a/handlers.go
++++ b/handlers.go
+@@ -67,7 +67,11 @@ func handlePoll(msg maelstrom.Message) error {
+ 			}
+ 			continue
+ 		}
+-		relayed, err := askOwner(owner, map[string]any{"type": "poll", "offsets": group})
++		fromStart := map[string]int{}
++		for name := range group {
++			fromStart[name] = 0
++		}
++		relayed, err := askOwner(owner, map[string]any{"type": "poll", "offsets": fromStart})
+ 		if err != nil {
+ 			return err
+ 		}

@@ -1,0 +1,16 @@
+Starts each poll one past the requested offset, so the value at the offset a client asks for is
+never returned.
+
+diff --git a/log.go b/log.go
+index 07a68a1..22a78d3 100644
+--- a/log.go
++++ b/log.go
+@@ -56,7 +56,7 @@ func appendLocal(name string, value int) int {
+ func pollLocal(group map[string]int) map[string][][2]int {
+ 	out := map[string][][2]int{}
+ 	for name, rawFrom := range group {
+-		from := rawFrom
++		from := rawFrom + 1
+ 		if from < 0 {
+ 			from = 0
+ 		}

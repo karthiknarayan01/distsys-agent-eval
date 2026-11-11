@@ -36,7 +36,9 @@ FLAGS = frozenset({
     "nemesis", "nemesis-interval", "availability", "topology", "consistency-models",
     "key-count", "max-txn-length", "max-writes-per-key", "log-stderr",
 })
-STARTUP_SECONDS = 120  # beyond the time limit: starting the JVM and the nodes, then the analysis
+# Beyond the time limit: starting the JVM and the nodes, then the analysis. Checking a long history
+# full of errors is the slow part: a Kafka run at 1000 requests a second takes about 3 minutes.
+STARTUP_SECONDS = 600
 OUTPUT_TAIL_CHARS = 4000
 
 
