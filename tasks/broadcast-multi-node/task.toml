@@ -1,5 +1,5 @@
 title = "Broadcast across a cluster"
-runs = 3
+runs = 5
 
 [agent]
 minutes = 45
