@@ -1,0 +1,27 @@
+# Run by hand from the Actions tab, after changing a task or the grader: grades every reference
+# and mutant in the sandbox image and fails if any of them comes out wrong.
+name: validate
+
+on:
+  workflow_dispatch:
+    inputs:
+      tasks:
+        description: Task ids, space-separated (empty for every task)
+        default: ""
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install
+        run: pip install -e ".[dev]"
+      - name: Build the sandbox image
+        run: distsys-eval build-image --tag distsys-agent-eval/sandbox:ci
+      - name: Check that every reference passes and every mutant fails
+        run: distsys-eval validate ${{ inputs.tasks }} --jobs 3 --image distsys-agent-eval/sandbox:ci

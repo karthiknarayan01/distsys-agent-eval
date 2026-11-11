@@ -44,5 +44,3 @@ jobs:
         env:
           SANDBOX_TEST_IMAGE: distsys-agent-eval/sandbox:ci
         run: python -m pytest -q -m docker
-      - name: Check that every reference passes and every mutant fails
-        run: distsys-eval validate --jobs 3 --image distsys-agent-eval/sandbox:ci
