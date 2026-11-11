@@ -40,10 +40,11 @@ def test_unique_ids_is_tested_under_partitions():
     assert task.maelstrom.flags["availability"] == "total"
 
 
-def test_brief_shows_the_exact_grading_command():
+def test_brief_shows_the_limits_and_the_exact_grading_command():
     task = load_task(TASKS_DIR / "unique-ids")
     assert task.brief.startswith("# Your workspace")
     assert task.prompt in task.brief
+    assert "You have 30 minutes and 100 steps" in task.brief
     assert "built with `go build -o node .` and tested 3 times" in task.brief
     assert (
         "maelstrom test --workload unique-ids --bin ./node --availability total --concurrency 2n "
