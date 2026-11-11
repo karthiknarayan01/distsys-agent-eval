@@ -2,6 +2,7 @@
 against a scripted shell, and writing the result."""
 
 import re
+from collections import Counter
 from dataclasses import replace
 from pathlib import Path
 
@@ -56,6 +57,7 @@ async def test_measure_counts_every_run_and_leaves_out_undecided_ones():
     shell = GradingShell(["valid", "invalid", None, "unknown", "invalid"])
     measured = await measure(shell, MUTANT, trials=5)
     assert (measured.failed, measured.decided) == (3, 4)
+    assert dict(measured.undecided) == {"perf (latency-graph)": 1}  # the fixture has no gnuplot
     runs = [c for c in shell.commands if "maelstrom test" in c]
     assert len(runs) == 5 and all("--bin /tmp/grade/node" in c for c in runs)
     assert "rm -rf /tmp/grade/trial-5" in shell.commands
@@ -89,6 +91,12 @@ def test_a_task_needs_the_largest_m_any_of_its_mutants_needs():
     assert calibration(caught=(20, 10)).runs == 12
     assert calibration(caught=(20, 2)).runs is None
     assert calibration(mutant_built=False).runs is None
+
+
+def test_the_summary_says_why_runs_went_undecided():
+    measured = replace(calibration().mutants[0], undecided=Counter({"workload (cycle-search-timeout)": 4}))
+    text = summary([replace(calibration(), mutants=[measured])])
+    assert "; undecided: 4 workload (cycle-search-timeout)" in text
 
 
 def test_summary():
