@@ -109,8 +109,10 @@ async def test_validate_grades_every_subject_at_most_jobs_at_a_time(monkeypatch)
                      else "fails-without-faults")
 
     monkeypatch.setattr(validate_module, "grade_subject", fake_grade_subject)
-    checks = await validate(load_tasks(), "sandbox:test", jobs=2)
-    assert [c.subject.name for c in checks][:3] == ["reference", "int-assertion", "overwrite"]
+    tasks = load_tasks()
+    checks = await validate(tasks, "sandbox:test", jobs=2)
+    first = [s.name for s in subjects(tasks[0])]
+    assert [c.subject.name for c in checks][: len(first)] == first  # in the order they're listed
     assert all(check.ok for check in checks) and most == 2
 
 

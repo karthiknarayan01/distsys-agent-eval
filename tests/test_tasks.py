@@ -29,7 +29,10 @@ time-limit = 10
 
 def test_shipped_tasks_load():
     tasks = load_tasks()
-    assert [task.id for task in tasks] == ["broadcast-single-node", "echo", "unique-ids"]
+    assert [task.id for task in tasks] == [
+        "broadcast-fault-tolerant", "broadcast-multi-node", "broadcast-single-node", "echo", "g-counter",
+        "unique-ids",
+    ]
     assert all(task.runs >= 1 and task.prompt and task.title for task in tasks)
 
 

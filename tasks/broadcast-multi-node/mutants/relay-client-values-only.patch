@@ -1,0 +1,25 @@
+Passes a value on only when it came straight from a client. A value a node first heard from
+another node is kept but never forwarded, so the hub doesn't relay between the other nodes.
+
+diff --git a/gossip.go b/gossip.go
+index 9bf0b77..3b63f99 100644
+--- a/gossip.go
++++ b/gossip.go
+@@ -6,6 +6,7 @@ package main
+ 
+ import (
+ 	"encoding/json"
++	"strings"
+ 	"time"
+ 
+ 	maelstrom "github.com/jepsen-io/maelstrom/demo/go"
+@@ -38,6 +39,9 @@ func handleBroadcast(msg maelstrom.Message) error {
+ 	fresh := storeNumbers(msg.Src, numbers)
+ 	sendPlan := map[string][]int{}
+ 	for _, neighbor := range ourNeighbors() {
++		if strings.HasPrefix(msg.Src, "n") {
++			break
++		}
+ 		missing := missingFrom(neighbor, fresh)
+ 		if len(missing) > 0 {
+ 			sendPlan[neighbor] = missing

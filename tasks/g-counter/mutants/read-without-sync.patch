@@ -1,0 +1,17 @@
+Reads the total straight from the store, without first writing to the scratch key. The
+sequential store may then answer from an old state, so a final read can miss adds made on other
+nodes.
+
+diff --git a/store.go b/store.go
+index 71a9735..040c123 100644
+--- a/store.go
++++ b/store.go
+@@ -64,8 +64,6 @@ func current() (total int, missing bool, err error) {
+ // there are no adds yet.
+ func readTotal() (int, error) {
+ 	for {
+-		syncStore()
+-
+ 		ctx, cancel := context.WithTimeout(context.Background(), rpcTimeout)
+ 		total, err := kv.ReadInt(ctx, counterKey)
+ 		cancel()

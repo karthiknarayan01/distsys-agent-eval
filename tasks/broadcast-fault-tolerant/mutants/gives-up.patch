@@ -1,0 +1,33 @@
+Retries an unacknowledged value for only three sweeps (under half a second) and then drops it,
+so a value sent into a partition that lasts longer never arrives.
+
+diff --git a/sweep.go b/sweep.go
+index ac65e0f..ce572fe 100644
+--- a/sweep.go
++++ b/sweep.go
+@@ -19,6 +19,9 @@ const sweepPause = 120 * time.Millisecond
+ // not acked yet. The sweep keeps re-sending these until the ack comes.
+ var awaitingAck = map[string]map[int]struct{}{}
+ 
++// tries counts the sweeps a number has been sent to a neighbor in.
++var tries = map[string]map[int]int{}
++
+ // markSent adds numbers to a neighbor's awaitingAck set.
+ func markSent(neighbor string, numbers []int) {
+ 	lock.Lock()
+@@ -49,7 +52,15 @@ func runSweep() {
+ 				continue
+ 			}
+ 			numbers := []int{}
++			if tries[neighbor] == nil {
++				tries[neighbor] = map[int]int{}
++			}
+ 			for m := range set {
++				tries[neighbor][m]++
++				if tries[neighbor][m] > 3 {
++					delete(set, m)
++					continue
++				}
+ 				numbers = append(numbers, m)
+ 			}
+ 			batches[neighbor] = numbers
