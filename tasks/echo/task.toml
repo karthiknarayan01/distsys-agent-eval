@@ -1,0 +1,11 @@
+title = "Echo"
+runs = 3
+
+[agent]
+minutes = 15
+steps = 50
+
+[maelstrom]
+workload = "echo"
+node-count = 1
+time-limit = 10

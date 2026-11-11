@@ -25,3 +25,21 @@ def test_build_image_runs_docker_build(monkeypatch):
     (argv,) = calls
     assert argv[:4] == ["docker", "build", "--tag", "sandbox:test"]
     assert argv[4].endswith("docker")
+
+
+def test_tasks_lists_every_task(capsys):
+    assert main(["tasks"]) == 0
+    lines = capsys.readouterr().out.splitlines()
+    assert [line.split()[0] for line in lines] == ["broadcast-single-node", "echo", "unique-ids"]
+    assert "m=3" in lines[1] and "Echo" in lines[1]
+
+
+def test_tasks_shows_one_brief(capsys):
+    assert main(["tasks", "echo"]) == 0
+    out = capsys.readouterr().out
+    assert out.startswith("# Your workspace") and "maelstrom test --workload echo" in out
+
+
+def test_tasks_unknown_id(capsys):
+    assert main(["tasks", "nope"]) == 1
+    assert "no task 'nope'" in capsys.readouterr().err

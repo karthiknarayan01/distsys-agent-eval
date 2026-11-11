@@ -1,0 +1,12 @@
+title = "Broadcast on a single node"
+runs = 3
+
+[agent]
+minutes = 30
+steps = 100
+
+[maelstrom]
+workload = "broadcast"
+node-count = 1
+time-limit = 20
+rate = 10
