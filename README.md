@@ -67,6 +67,23 @@ An attempt the harness let down is recorded as an `error` and isn't scored: Dock
 model couldn't be reached, or Maelstrom couldn't decide a run. Running the same command again
 carries on: attempts already recorded are kept, and only missing ones and errors are run again.
 
+## Reading the results
+
+```sh
+distsys-eval report results/shellmate-ollama-qwen3.5-9b     # a table per agent
+distsys-eval report results/* --json                        # every number, for other tools
+```
+
+For each task the report gives pass^k: the chance that k of its attempts, drawn at random, all
+pass. With c of n attempts passing it is C(c, k) / C(n, k), so pass^1 is the pass rate and pass^n
+is 1 only if every attempt passed. An agent that solves a task now and then scores well at k = 1
+and falls away as k grows; one that can be relied on stays up. The overall row is the mean over
+tasks. Errors are left out of every number and counted on their own.
+
+Each failed attempt is given one reason: the agent ran out of steps or time (or its reply hit the
+model's output cap), or else the grader's category. The report also shows the mean steps and
+minutes per attempt, and the tokens each task used.
+
 ## Trusting the grader
 
 Every task carries code whose grade is known: `reference/`, a correct solution that must pass,

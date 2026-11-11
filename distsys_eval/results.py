@@ -94,5 +94,9 @@ def totals(results: list[AttemptResult]) -> str:
     count = {outcome: sum(r.outcome == outcome for r in results) for outcome in ("pass", "fail", "error")}
     return (
         f"{len(results)} attempts: {count['pass']} passed, {count['fail']} failed, "
-        f"{count['error']} errors (not scored)"
+        f"{count['error']} {plural(count['error'], 'error')} (not scored)"
     )
+
+
+def plural(count: int, word: str) -> str:
+    return word if count == 1 else word + "s"

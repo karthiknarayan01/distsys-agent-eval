@@ -9,20 +9,23 @@
     distsys-eval calibrate        measure how often one run catches each mutant, and choose m
     distsys-eval run --provider ollama
                                   n attempts by an agent at every task, graded, into results/
+    distsys-eval report DIR       pass^k per task, why attempts failed, and what they cost
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import subprocess
 import sys
 from pathlib import Path
 
 from distsys_eval import __version__, runner
 from distsys_eval import calibrate as calibration
+from distsys_eval import report as reporting
 from distsys_eval.grader import describe, grade_directory
-from distsys_eval.results import line, totals
+from distsys_eval.results import RESULTS_FILE, line, load, totals
 from distsys_eval.sandbox import DOCKERFILE_DIR, IMAGE
 from distsys_eval.shellmate import ShellmateAgent
 from distsys_eval.tasks import TASKS_DIR, load_tasks
@@ -79,6 +82,10 @@ def build_parser() -> argparse.ArgumentParser:
     attempts.add_argument("--jobs", type=int, default=1, help="attempts to run at once (default 1)")
     attempts.add_argument("--image", default=IMAGE, help=f"sandbox image (default {IMAGE})")
     attempts.set_defaults(run=run_command)
+    report = commands.add_parser("report", help="summarize the results of one or more runs")
+    report.add_argument("dirs", nargs="+", type=Path, help="results directories, one per agent")
+    report.add_argument("--json", action="store_true", help="print JSON instead of tables")
+    report.set_defaults(run=report_command)
     return parser
 
 
@@ -165,6 +172,22 @@ def run_command(args: argparse.Namespace) -> int:
         print(e, file=sys.stderr)
         return 2
     print(totals(results))
+    return 0
+
+
+def report_command(args: argparse.Namespace) -> int:
+    """A report for each results directory, as tables or as one JSON list."""
+    reports = []
+    for directory in args.dirs:
+        results = load(directory / RESULTS_FILE)
+        if not results:
+            print(f"no results in {directory}", file=sys.stderr)
+            return 2
+        reports.append(reporting.summarize(results))
+    if args.json:
+        print(json.dumps([reporting.as_json(r) for r in reports], indent=2))
+    else:
+        print("\n\n".join(reporting.render(r) for r in reports))
     return 0
 
 

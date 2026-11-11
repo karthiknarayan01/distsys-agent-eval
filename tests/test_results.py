@@ -40,4 +40,4 @@ def test_line():
 
 def test_totals():
     results = [result(), result(attempt=2, outcome="fail"), result(attempt=3, outcome="error")]
-    assert totals(results) == "3 attempts: 1 passed, 1 failed, 1 errors (not scored)"
+    assert totals(results) == "3 attempts: 1 passed, 1 failed, 1 error (not scored)"
