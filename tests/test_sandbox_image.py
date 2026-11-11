@@ -47,3 +47,12 @@ async def test_a_binary_that_isnt_there_is_a_crash():
             pytest.skip(f"{IMAGE} has no Maelstrom: not the sandbox image")
         result = await run_maelstrom(box, "/work/missing", ECHO, run_dir="runs/1")
     assert result.verdict == "crashed"
+
+
+async def test_the_tools_maelstroms_checkers_run_are_installed():
+    """Without them a checker can't decide, and every run of the tasks that need them is unknown."""
+    async with Sandbox.start(SandboxConfig(image=IMAGE)) as box:
+        if not (await box.exec("command -v maelstrom", timeout=10)).ok:
+            pytest.skip(f"{IMAGE} has no Maelstrom: not the sandbox image")
+        for tool in ("gnuplot", "dot"):
+            assert (await box.exec(f"command -v {tool}", timeout=10)).ok, f"{tool} is missing"

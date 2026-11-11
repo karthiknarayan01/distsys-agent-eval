@@ -17,7 +17,9 @@ The reference is run the same way. A correct solution should never fail, so its 
 reported as they are: they mean the task is flaky, which no choice of m fixes.
 
 A run fails as grading would fail it: invalid, or valid but over the task's targets. A run
-Maelstrom couldn't decide (unknown) is left out of the counts. A run with no verdict
+Maelstrom couldn't decide (unknown) is left out of the counts, and the summary says which of
+its checkers couldn't decide and why, since many such runs leave too few to count. A run with no
+verdict
 (crashed) counts as a catch for a mutant and as a failure for the reference.
 """
 
@@ -27,11 +29,12 @@ import asyncio
 import math
 import re
 import tempfile
-from dataclasses import dataclass
+from collections import Counter
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from distsys_eval.grader import GRADE_DIR, build_attempt
-from distsys_eval.maelstrom import Shell, run_maelstrom
+from distsys_eval.maelstrom import MaelstromResult, Shell, run_maelstrom
 from distsys_eval.sandbox import ExecResult, Sandbox, SandboxConfig
 from distsys_eval.targets import missed
 from distsys_eval.tasks import Task
@@ -39,6 +42,7 @@ from distsys_eval.validate import Subject, materialize, subjects
 
 TARGET = 0.99  # the chance that m runs catch each mutant
 Z_95 = 1.645  # one-sided 95% normal quantile, for the lower confidence bound
+ERROR_CHARS = 200  # of a checker's exception, in the summary
 MAX_RUNS = 20  # beyond this a mutant is too rarely caught to be useful; fix the task instead
 
 
@@ -50,6 +54,7 @@ class Measurement:
     build: ExecResult
     failed: int  # runs that weren't valid or missed a target: catches, for a mutant
     decided: int  # runs with a verdict to count (all but unknown)
+    undecided: Counter[str] = field(default_factory=Counter)  # why the other runs were unknown
 
     @property
     def built(self) -> bool:
@@ -108,14 +113,36 @@ async def measure(shell: Shell, subject: Subject, trials: int, grade_dir: str = 
     if not build.ok:
         return Measurement(subject, build, 0, 0)
     failed = decided = 0
+    undecided: Counter[str] = Counter()
     for trial in range(1, trials + 1):
         run_dir = f"{grade_dir}/trial-{trial}"
         run = await run_maelstrom(shell, binary, subject.task.maelstrom, run_dir)
         await shell.exec(f"rm -rf {run_dir}", timeout=60)  # keep the container's disk small
-        if run.verdict != "unknown":
-            decided += 1
-            failed += not run.valid or bool(missed(subject.task.targets, run.results))
-    return Measurement(subject, build, failed, decided)
+        if run.verdict == "unknown":
+            undecided[why_undecided(run)] += 1
+            continue
+        decided += 1
+        failed += not run.valid or bool(missed(subject.task.targets, run.results))
+    return Measurement(subject, build, failed, decided, undecided)
+
+
+def why_undecided(run: MaelstromResult) -> str:
+    """Which checkers couldn't decide a run, each with the part of it that couldn't, or the
+    anomalies it names, or the exception it threw: "perf (latency-graph)", "workload (error: ...)"."""
+    reasons = []
+    for name in run.undecided or ["?"]:
+        checker = run.results.get(name, {})
+        parts = [key for key, value in checker.items() if key != "error" and isinstance(value, dict)
+                 and undecided(value)]
+        if isinstance(checker.get("error"), dict):  # the checker threw: Maelstrom keeps the cause
+            parts.append(f"error: {str(checker['error'].get('cause', '?'))[:ERROR_CHARS]}")
+        parts += [str(anomaly) for anomaly in checker.get("anomaly-types") or []]
+        reasons.append(name + (f" ({', '.join(parts)})" if parts else ""))
+    return ", ".join(reasons)
+
+
+def undecided(checker: dict) -> bool:
+    return checker.get("valid?") not in (True, False)
 
 
 def runs_needed(caught: int, trials: int, target: float = TARGET) -> int | None:
@@ -162,7 +189,11 @@ def summary(results: list[Calibration]) -> str:
 def subject_line(measurement: Measurement, verb: str) -> str:
     if not measurement.built:
         return "doesn't build"
-    return f"{verb} in {measurement.failed} of {measurement.decided} runs"
+    line = f"{verb} in {measurement.failed} of {measurement.decided} runs"
+    if measurement.undecided:
+        reasons = ", ".join(f"{count} {why}" for why, count in measurement.undecided.most_common())
+        line += f"; undecided: {reasons}"
+    return line
 
 
 def write(result: Calibration) -> None:
