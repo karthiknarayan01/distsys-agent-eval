@@ -1,0 +1,15 @@
+Sends each batch once and forgets it, without waiting for the ack. On a reliable network that's
+enough; a frame lost to a partition is never sent again.
+
+diff --git a/sweep.go b/sweep.go
+index ac65e0f..2e2abe7 100644
+--- a/sweep.go
++++ b/sweep.go
+@@ -53,6 +53,7 @@ func runSweep() {
+ 				numbers = append(numbers, m)
+ 			}
+ 			batches[neighbor] = numbers
++			delete(awaitingAck, neighbor)
+ 		}
+ 		lock.Unlock()
+ 		for neighbor, numbers := range batches {

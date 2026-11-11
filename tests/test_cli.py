@@ -6,6 +6,7 @@ import pytest
 
 from distsys_eval import __version__
 from distsys_eval.cli import main
+from distsys_eval.tasks import load_tasks
 
 
 def test_version(capsys):
@@ -32,8 +33,9 @@ def test_build_image_runs_docker_build(monkeypatch):
 def test_tasks_lists_every_task(capsys):
     assert main(["tasks"]) == 0
     lines = capsys.readouterr().out.splitlines()
-    assert [line.split()[0] for line in lines] == ["broadcast-single-node", "echo", "unique-ids"]
-    assert "m=3" in lines[1] and "Echo" in lines[1]
+    assert [line.split()[0] for line in lines] == [task.id for task in load_tasks()]
+    echo = next(line for line in lines if line.startswith("echo "))
+    assert "m=3" in echo and "Echo" in echo
 
 
 def test_tasks_shows_one_brief(capsys):

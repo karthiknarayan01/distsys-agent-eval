@@ -1,0 +1,17 @@
+Adds by reading the total and writing back total + delta, instead of a compare-and-swap. Two
+nodes adding at once both read the same total, and one add is lost.
+
+diff --git a/store.go b/store.go
+index 71a9735..4b2272f 100644
+--- a/store.go
++++ b/store.go
+@@ -34,7 +34,8 @@ func increment(delta int) error {
+ 		total, missing, err := current()
+ 		if err == nil {
+ 			ctx, cancel := context.WithTimeout(context.Background(), rpcTimeout)
+-			err = kv.CompareAndSwap(ctx, counterKey, total, total+delta, missing)
++			err = kv.Write(ctx, counterKey, total+delta)
++			_ = missing
+ 			cancel()
+ 		}
+ 		if err == nil {

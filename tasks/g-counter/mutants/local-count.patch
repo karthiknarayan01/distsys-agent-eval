@@ -1,0 +1,45 @@
+Keeps the count in each node's memory instead of the shared store, so a read returns only the
+adds that node itself was sent.
+
+diff --git a/main.go b/main.go
+index ef33a72..9c8ec0b 100644
+--- a/main.go
++++ b/main.go
+@@ -18,6 +18,7 @@ import (
+ 	"encoding/json"
+ 	"log"
+ 	"os"
++	"sync/atomic"
+ 
+ 	maelstrom "github.com/jepsen-io/maelstrom/demo/go"
+ )
+@@ -25,6 +26,8 @@ import (
+ var (
+ 	node *maelstrom.Node
+ 	kv   *maelstrom.KV
++
++	localTotal atomic.Int64
+ )
+ 
+ func main() {
+@@ -48,18 +51,13 @@ func handleAdd(msg maelstrom.Message) error {
+ 		return err
+ 	}
+ 
+-	if err := increment(int(body["delta"].(float64))); err != nil {
+-		return err
+-	}
++	localTotal.Add(int64(body["delta"].(float64)))
+ 
+ 	return node.Reply(msg, map[string]any{"type": "add_ok"})
+ }
+ 
+ func handleRead(msg maelstrom.Message) error {
+-	total, err := readTotal()
+-	if err != nil {
+-		return err
+-	}
++	total := int(localTotal.Load())
+ 
+ 	return node.Reply(msg, map[string]any{"type": "read_ok", "value": total})
+ }

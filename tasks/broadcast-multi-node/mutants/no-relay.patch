@@ -1,0 +1,16 @@
+The hub keeps what the other nodes send it but never passes anything on, so a node only ever
+learns its own clients' values (and the hub learns everyone's).
+
+diff --git a/topology.go b/topology.go
+index 23b0b1d..493780b 100644
+--- a/topology.go
++++ b/topology.go
+@@ -28,7 +28,7 @@ func ourNeighbors() []string {
+ 				others = append(others, id)
+ 			}
+ 		}
+-		return others
++		return nil
+ 	}
+ 	return []string{hubOf()}
+ }

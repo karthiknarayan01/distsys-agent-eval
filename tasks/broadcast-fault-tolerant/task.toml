@@ -1,0 +1,13 @@
+title = "Broadcast through network partitions"
+runs = 3
+
+[agent]
+minutes = 45
+steps = 150
+
+[maelstrom]
+workload = "broadcast"
+node-count = 5
+time-limit = 20
+rate = 10
+nemesis = "partition"
