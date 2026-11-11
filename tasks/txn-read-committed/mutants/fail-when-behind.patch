@@ -1,0 +1,24 @@
+Answers a transaction with an error when more than 100 records are waiting to reach the other
+node, as if it had been refused. It has already committed, so its writes are seen anyway.
+
+diff --git a/txn.go b/txn.go
+index e67b521..764bae9 100644
+--- a/txn.go
++++ b/txn.go
+@@ -51,6 +51,16 @@ func handleTxn(msg maelstrom.Message) error {
+ 	commitTxn(txn)
+ 	enqueueReplica(txn, writes)
+ 
++	pendingLock.Lock()
++	behind := 0
++	for _, records := range pending {
++		behind += len(records)
++	}
++	pendingLock.Unlock()
++	if behind > 100 {
++		return node.Reply(msg, map[string]any{"type": "error", "code": 11, "text": "replicas are behind"})
++	}
++
+ 	return node.Reply(msg, map[string]any{"type": "txn_ok", "txn": out})
+ }
+ 
