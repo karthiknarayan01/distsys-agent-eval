@@ -127,18 +127,19 @@ def maelstrom_command(binary: str, options: MaelstromOptions) -> str:
     """The `maelstrom test` command line, every value shell-quoted. With a rename, Maelstrom runs
     maelstrom-rename, told the real binary (which must be an absolute path, since Maelstrom starts
     nodes in a directory of its own) and the names through the environment."""
-    parts = ["maelstrom", "test", "--workload", options.workload, "--bin", binary]
+    environment = ""
     if options.rename:
-        parts = [
-            f"MAELSTROM_RENAME_BIN={binary}", f"MAELSTROM_RENAME={options.rename.as_json()}",
-            "maelstrom", "test", "--workload", options.workload, "--bin", RENAMER,
-        ]
+        # The shell takes NAME=value as an assignment only if the name itself isn't quoted.
+        variables = {"MAELSTROM_RENAME_BIN": binary, "MAELSTROM_RENAME": options.rename.as_json()}
+        environment = "".join(f"{name}={shlex.quote(value)} " for name, value in variables.items())
+        binary = RENAMER
+    parts = ["maelstrom", "test", "--workload", options.workload, "--bin", binary]
     for flag, value in sorted(options.flags.items()):
         if value is True:
             parts.append(f"--{flag}")
         elif value is not False:
             parts += [f"--{flag}", str(value)]
-    return shlex.join(parts)
+    return environment + shlex.join(parts)
 
 
 def verdict_of(valid: Any) -> Verdict:

@@ -36,8 +36,9 @@ def test_the_command_line():
 
 def test_a_renamed_protocol_runs_the_renamer_and_tells_it_the_binary_and_the_names():
     rename = Rename({"echo": "say", "echo_ok": "said"}, {"echo": "words"})
-    words = shlex.split(maelstrom_command("/work/node", MaelstromOptions("echo", {"node-count": 1}, rename)))
-    assert words == [
+    command = maelstrom_command("/work/node", MaelstromOptions("echo", {"node-count": 1}, rename))
+    assert command.startswith("MAELSTROM_RENAME_BIN=/work/node MAELSTROM_RENAME='{")  # names unquoted
+    assert shlex.split(command) == [
         "MAELSTROM_RENAME_BIN=/work/node",
         'MAELSTROM_RENAME={"fields": {"echo": "words"}, "types": {"echo": "say", "echo_ok": "said"}}',
         "maelstrom", "test", "--workload", "echo", "--bin", RENAMER, "--node-count", "1",
