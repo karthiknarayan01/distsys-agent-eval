@@ -43,3 +43,26 @@ def test_tasks_shows_one_brief(capsys):
 def test_tasks_unknown_id(capsys):
     assert main(["tasks", "nope"]) == 1
     assert "no task 'nope'" in capsys.readouterr().err
+
+
+def test_grade_prints_the_grade_and_exits_0_on_a_pass(monkeypatch, capsys, tmp_path):
+    from distsys_eval.grader import Grade
+    from distsys_eval.sandbox import ExecResult
+
+    seen = []
+
+    async def fake_grade_directory(task, source, image):
+        seen.append((task.id, source, image))
+        return Grade("pass", None, ExecResult(0, "", False, False), [])
+
+    monkeypatch.setattr("distsys_eval.cli.grade_directory", fake_grade_directory)
+    assert main(["grade", "echo", str(tmp_path), "--image", "sandbox:test"]) == 0
+    assert seen == [("echo", tmp_path, "sandbox:test")]
+    assert capsys.readouterr().out.startswith("echo: pass")
+
+
+def test_grade_refuses_an_unknown_task_or_a_missing_directory(capsys, tmp_path):
+    assert main(["grade", "nope", str(tmp_path)]) == 2
+    assert main(["grade", "echo", str(tmp_path / "missing")]) == 2
+    err = capsys.readouterr().err
+    assert "no task 'nope'" in err and "isn't a directory" in err

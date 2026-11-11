@@ -21,6 +21,18 @@ distsys-eval tasks          # list them
 distsys-eval tasks echo     # everything the agent is told, including the exact grading command
 ```
 
+## Grading
+
+An attempt is graded by building it with `go build` and running Maelstrom the task's m times,
+stopping at the first run that isn't valid. It passes only if every run is valid. A failure gets
+one category: `doesnt-build`, `crashed`, `fails-without-faults`, or `fails-under-faults` (valid
+again once the task's faults are switched off). A run Maelstrom couldn't decide is an `error`
+and isn't counted against the agent.
+
+```sh
+distsys-eval grade echo path/to/solution    # grade a directory in a fresh sandbox
+```
+
 ## Development
 
 ```sh
