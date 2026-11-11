@@ -7,7 +7,9 @@
     # the container is gone here, however the block was left
 
 The container has no network and limited CPU, memory and processes, so nothing an agent runs
-can reach the host, the internet or another attempt. Everything goes through the `docker`
+can reach the host, the internet or another attempt. An agent that runs inside the container and
+calls its model over the network (command.py) can be given one, and the names of environment
+variables to pass in, such as its API key. Everything goes through the `docker`
 command line, so the only thing the harness needs is Docker itself.
 
 Two kinds of failure are kept apart. A command that fails inside the container is a result:
@@ -49,6 +51,8 @@ class SandboxConfig:
     memory: str = "4g"
     pids: int = 1024
     workdir: str = "/work"
+    network: str = "none"  # a docker network: none, or e.g. bridge for an agent that needs one
+    env: tuple[str, ...] = ()  # environment variables passed in from the host, by name
 
 
 @dataclass(frozen=True)
@@ -83,7 +87,8 @@ class Sandbox:
         name = f"distsys-eval-{uuid.uuid4().hex[:12]}"
         started = await docker.run(
             "run", "--detach", "--init", "--name", name,
-            "--network", "none",
+            "--network", config.network,
+            *(arg for name in config.env for arg in ("--env", name)),
             "--cpus", str(config.cpus), "--memory", config.memory, "--pids-limit", str(config.pids),
             "--workdir", config.workdir,
             config.image, "sleep", str(KEEP_ALIVE_SECONDS),

@@ -137,6 +137,31 @@ def test_run_prints_each_attempt_then_the_totals(monkeypatch, capsys):
     ]
 
 
+def test_run_a_command_agent_with_a_network_and_its_key(monkeypatch, capsys):
+    seen = {}
+
+    def fake_sandboxes(image, network, env):
+        seen["sandbox"] = (image, network, env)
+        return None
+
+    async def fake_run(agent, tasks, attempts, out, jobs, sandbox, on_result):
+        seen["agent"] = (agent.name, agent.command, out.as_posix())
+        return []
+
+    monkeypatch.setattr("distsys_eval.runner.sandboxes", fake_sandboxes)
+    monkeypatch.setattr("distsys_eval.runner.run", fake_run)
+    argv = ["run", "echo", "--command", 'claude -p "$(cat "$BRIEF")"', "--name", "claude-code",
+            "--image", "mine", "--network", "--env", "ANTHROPIC_API_KEY"]
+    assert main(argv) == 0
+    assert seen["sandbox"] == ("mine", "bridge", ("ANTHROPIC_API_KEY",))
+    assert seen["agent"] == ("claude-code", 'claude -p "$(cat "$BRIEF")"', "results/claude-code")
+
+
+def test_a_command_agent_needs_a_name(capsys):
+    assert main(["run", "--command", "true"]) == 2
+    assert "--command needs --name" in capsys.readouterr().err
+
+
 def test_report_prints_a_table_or_json(tmp_path, capsys):
     from distsys_eval.results import AttemptResult, append
 

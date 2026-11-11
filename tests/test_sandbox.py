@@ -20,6 +20,17 @@ async def test_a_container_has_no_network_and_limits():
     assert run[run.index("--memory") + 1] == "2g"
     assert run[run.index("--pids-limit") + 1] == "256"
     assert "--init" in run and run[-3] == "img"
+    assert "--env" not in run
+
+
+async def test_an_agent_that_needs_a_network_and_a_key_can_have_them():
+    docker = FakeDocker()
+    config = SandboxConfig(network="bridge", env=("ANTHROPIC_API_KEY", "HOME_TOKEN"))
+    async with Sandbox.start(config, docker):
+        pass
+    run = docker.calls[0][0]
+    assert run[run.index("--network") + 1] == "bridge"
+    assert [run[i + 1] for i, arg in enumerate(run) if arg == "--env"] == ["ANTHROPIC_API_KEY", "HOME_TOKEN"]
 
 
 async def test_the_container_is_removed_when_the_block_ends():

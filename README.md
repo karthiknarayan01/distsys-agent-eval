@@ -45,6 +45,21 @@ pinned to a commit, with `shell`, `read_file` and `write_file` tools that work i
 It runs a local Qwen model through Ollama, DeepSeek or Claude; the model is called from the host,
 so the container itself never needs a network.
 
+Any command-line coding agent can be run instead. Build an image from the sandbox image with the
+agent installed, and give the command that starts it; the brief is in the file `$BRIEF`:
+
+```sh
+distsys-eval run --command 'claude -p "$(cat "$BRIEF")" --dangerously-skip-permissions' \
+    --name claude-code --image my-sandbox-with-claude --network --env ANTHROPIC_API_KEY
+```
+
+The command runs in the working directory until it exits or the task's time runs out. Its output
+is the transcript. Its steps and tokens aren't known to the harness, so they're recorded as 0 and
+the step limit isn't enforced, and a command that exits with an error is recorded as an `error`,
+since that is usually the agent's own setup failing. Such an agent calls its model from inside
+the container, so `--network` gives the sandbox one; it could then fetch a solution as well, which
+is worth keeping in mind when comparing its results with an agent's that had no network.
+
 ## Grading
 
 An attempt is graded by building it with `go build` and running Maelstrom the task's m times,
