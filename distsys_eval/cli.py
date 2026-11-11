@@ -9,6 +9,8 @@
     distsys-eval calibrate        measure how often one run catches each mutant, and choose m
     distsys-eval run --provider ollama
                                   n attempts by an agent at every task, graded, into results/
+    distsys-eval run --command CMD --name NAME --image IMG --network --env API_KEY
+                                  the same for a command-line agent installed in IMG
     distsys-eval report DIR       pass^k per task, why attempts failed, and what they cost
 """
 
@@ -24,6 +26,8 @@ from pathlib import Path
 from distsys_eval import __version__, runner
 from distsys_eval import calibrate as calibration
 from distsys_eval import report as reporting
+from distsys_eval.agent import Agent
+from distsys_eval.command import CommandAgent
 from distsys_eval.grader import describe, grade_directory
 from distsys_eval.results import RESULTS_FILE, line, load, totals
 from distsys_eval.sandbox import DOCKERFILE_DIR, IMAGE
@@ -74,9 +78,16 @@ def build_parser() -> argparse.ArgumentParser:
     calibrate.set_defaults(run=calibrate_command)
     attempts = commands.add_parser("run", help="run an agent's attempts at the tasks and grade them")
     attempts.add_argument("tasks", nargs="*", help="task ids (default: every task)")
-    attempts.add_argument("--provider", required=True, choices=["ollama", "deepseek", "anthropic"],
-                          help="the model provider Shellmate uses")
+    which = attempts.add_mutually_exclusive_group(required=True)
+    which.add_argument("--provider", choices=["ollama", "deepseek", "anthropic"],
+                       help="run Shellmate with this model provider")
+    which.add_argument("--command", dest="agent_command",
+                       help="run this command-line agent in the sandbox; the brief is at $BRIEF")
     attempts.add_argument("--model", help="the provider's model (default: Shellmate's for that provider)")
+    attempts.add_argument("--name", help="what the results call a --command agent (required with it)")
+    attempts.add_argument("--network", action="store_true", help="give the sandbox a network, for --command")
+    attempts.add_argument("--env", action="append", default=[], metavar="NAME",
+                          help="pass this environment variable into the sandbox (repeatable)")
     attempts.add_argument("--attempts", type=int, default=5, help="attempts per task (default 5)")
     attempts.add_argument("--out", type=Path, help="results directory (default results/<agent>)")
     attempts.add_argument("--jobs", type=int, default=1, help="attempts to run at once (default 1)")
@@ -156,16 +167,15 @@ def run_command(args: argparse.Namespace) -> int:
     chosen = pick_tasks(args.tasks)
     if chosen is None:
         return 2
-    try:
-        agent = ShellmateAgent.from_provider(args.provider, args.model)
-    except (RuntimeError, ValueError) as e:  # e.g. an API key that isn't set
-        print(e, file=sys.stderr)
+    agent = pick_agent(args)
+    if agent is None:
         return 2
     out = args.out or Path("results") / agent.name.replace("/", "-").replace(":", "-")
     print(f"{agent.name}: {args.attempts} attempts at {len(chosen)} tasks, into {out}")
     try:
         results = asyncio.run(runner.run(
-            agent, chosen, args.attempts, out, args.jobs, runner.sandboxes(args.image),
+            agent, chosen, args.attempts, out, args.jobs,
+            runner.sandboxes(args.image, "bridge" if args.network else "none", tuple(args.env)),
             on_result=lambda result: print(line(result), flush=True),
         ))
     except runner.RunnerError as e:
@@ -173,6 +183,20 @@ def run_command(args: argparse.Namespace) -> int:
         return 2
     print(totals(results))
     return 0
+
+
+def pick_agent(args: argparse.Namespace) -> Agent | None:
+    """The agent the run options ask for, or None (after saying why) if it can't be made."""
+    if args.agent_command:
+        if not args.name:
+            print("--command needs --name, to tell its results apart", file=sys.stderr)
+            return None
+        return CommandAgent(args.name, args.agent_command)
+    try:
+        return ShellmateAgent.from_provider(args.provider, args.model)
+    except (RuntimeError, ValueError) as e:  # e.g. an API key that isn't set
+        print(e, file=sys.stderr)
+        return None
 
 
 def report_command(args: argparse.Namespace) -> int:

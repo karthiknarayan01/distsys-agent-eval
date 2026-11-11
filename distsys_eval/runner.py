@@ -39,9 +39,11 @@ class RunnerError(RuntimeError):
     """The output directory holds another agent's results."""
 
 
-def sandboxes(image: str | None = None) -> SandboxFactory:
-    """Fresh sandboxes from `image`, or the default image."""
-    return lambda: Sandbox.start(SandboxConfig(image=image) if image else None)
+def sandboxes(image: str | None = None, network: str = "none", env: tuple[str, ...] = ()) -> SandboxFactory:
+    """Fresh sandboxes from `image` (or the default image), on `network`, given the host's
+    values of the environment variables named in `env`."""
+    config = SandboxConfig(network=network, env=env, **({"image": image} if image else {}))
+    return lambda: Sandbox.start(config)
 
 
 async def run(
