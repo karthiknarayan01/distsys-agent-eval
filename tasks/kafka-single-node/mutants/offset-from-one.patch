@@ -1,0 +1,16 @@
+Answers a send with the offset one past the value it just appended, while polls report each value
+at its true index, so a client is told an offset that later polls give to a different value.
+
+diff --git a/log.go b/log.go
+index 07a68a1..50ae0ad 100644
+--- a/log.go
++++ b/log.go
+@@ -46,7 +46,7 @@ func appendLocal(name string, value int) int {
+ 	state.lock.Lock()
+ 	state.messages = append(state.messages, value)
+ 	state.dirty = true
+-	offset := len(state.messages) - 1
++	offset := len(state.messages)
+ 	state.lock.Unlock()
+ 	return offset
+ }
