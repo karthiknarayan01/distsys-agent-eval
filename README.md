@@ -21,6 +21,18 @@ distsys-eval tasks          # list them
 distsys-eval tasks echo     # everything the agent is told, including the exact grading command
 ```
 
+## Agents
+
+An agent gets the task's brief and the container's working directory, reachable only through
+running a command, reading a file and writing a file. It works until it says it's done or runs out
+of the task's time or steps, and writes a transcript of everything it did. It never sees the grade.
+Any agent fits behind `Agent` in `distsys_eval/agent.py`.
+
+The built-in one is [Shellmate](https://github.com/karthiknarayan01/Shellmate)'s agent loop,
+pinned to a commit, with `shell`, `read_file` and `write_file` tools that work inside the container.
+It runs a local Qwen model through Ollama, DeepSeek or Claude; the model is called from the host,
+so the container itself never needs a network.
+
 ## Grading
 
 An attempt is graded by building it with `go build` and running Maelstrom the task's m times,

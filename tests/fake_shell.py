@@ -46,3 +46,8 @@ class HostShell:
 
     async def read_file(self, path: str) -> bytes:
         return (self.root / path).read_bytes()
+
+    async def write_file(self, path: str, content: str | bytes) -> None:
+        target = self.root / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(content.encode() if isinstance(content, str) else content)

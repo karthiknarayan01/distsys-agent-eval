@@ -5,6 +5,7 @@
     task.brief                            everything the agent is told
     task.maelstrom                        the workload and flags each grading run uses
     task.runs                             m: how many runs in a row the attempt must pass
+    task.limits                           the agent's time and steps
 
 Each task is a directory under tasks/ whose name is its id:
 
@@ -57,7 +58,7 @@ class TaskError(ValueError):
 @dataclass(frozen=True)
 class AgentLimits:
     minutes: float  # wall-clock time the agent may spend before it is stopped
-    steps: int  # tool calls the agent may make
+    steps: int  # model replies the agent may make; one reply may run several tools
 
 
 @dataclass(frozen=True)
@@ -95,9 +96,8 @@ def load_task(path: Path) -> Task:
     if not prompt:
         raise TaskError(f"{task_id}: prompt.md is empty")
     workspace = _read(path.parent / "workspace.md").strip()
-    return Task(
-        task_id, title, prompt, brief(workspace, prompt, maelstrom, runs), maelstrom, runs, limits, path
-    )
+    told = brief(workspace, prompt, maelstrom, runs, limits)
+    return Task(task_id, title, prompt, told, maelstrom, runs, limits, path)
 
 
 def agent_limits(task_id: str, table: dict[str, Any]) -> AgentLimits:
@@ -122,12 +122,16 @@ def maelstrom_options(task_id: str, table: dict[str, Any]) -> MaelstromOptions:
         raise TaskError(f"{task_id}: [maelstrom] {e}") from e
 
 
-def brief(workspace: str, prompt: str, maelstrom: MaelstromOptions, runs: int) -> str:
+def brief(
+    workspace: str, prompt: str, maelstrom: MaelstromOptions, runs: int, limits: AgentLimits
+) -> str:
     """What the agent is told. The grading section is generated from the task itself, so it
-    always shows the exact command the attempt will be tested with."""
+    always shows the agent's limits and the exact command the attempt will be tested with."""
     times = "once" if runs == 1 else f"{runs} times"
     grading = (
         "## How it's graded\n\n"
+        f"You have {limits.minutes:g} minutes and {limits.steps} steps, a step being one reply from you, "
+        "however many tools it runs. If either runs out, you are stopped where you are.\n\n"
         f"When you stop, your program is built with `{BUILD}` and tested {times} with:\n\n"
         f"    {maelstrom_command(BINARY, maelstrom)}\n\n"
         "The runs are independent, each with its own timing and faults. The attempt passes only if it "
