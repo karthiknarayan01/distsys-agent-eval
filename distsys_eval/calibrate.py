@@ -16,7 +16,8 @@ is 0.88 and gives m = 3. More trials narrow the interval and can lower m.
 The reference is run the same way. A correct solution should never fail, so its failures are
 reported as they are: they mean the task is flaky, which no choice of m fixes.
 
-A run Maelstrom couldn't decide (unknown) is left out of the counts. A run with no verdict
+A run fails as grading would fail it: invalid, or valid but over the task's targets. A run
+Maelstrom couldn't decide (unknown) is left out of the counts. A run with no verdict
 (crashed) counts as a catch for a mutant and as a failure for the reference.
 """
 
@@ -32,6 +33,7 @@ from pathlib import Path
 from distsys_eval.grader import GRADE_DIR, build_attempt
 from distsys_eval.maelstrom import Shell, run_maelstrom
 from distsys_eval.sandbox import ExecResult, Sandbox, SandboxConfig
+from distsys_eval.targets import missed
 from distsys_eval.tasks import Task
 from distsys_eval.validate import Subject, materialize, subjects
 
@@ -46,7 +48,7 @@ class Measurement:
 
     subject: Subject
     build: ExecResult
-    failed: int  # runs that weren't valid: catches, for a mutant
+    failed: int  # runs that weren't valid or missed a target: catches, for a mutant
     decided: int  # runs with a verdict to count (all but unknown)
 
     @property
@@ -112,7 +114,7 @@ async def measure(shell: Shell, subject: Subject, trials: int, grade_dir: str = 
         await shell.exec(f"rm -rf {run_dir}", timeout=60)  # keep the container's disk small
         if run.verdict != "unknown":
             decided += 1
-            failed += not run.valid
+            failed += not run.valid or bool(missed(subject.task.targets, run.results))
     return Measurement(subject, build, failed, decided)
 
 

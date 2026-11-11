@@ -1,11 +1,13 @@
 """Grading an attempt, against a scripted shell: building, the m runs, and the failure category."""
 
 import re
+from dataclasses import replace
 from pathlib import Path
 
 from distsys_eval.grader import describe, grade_attempt, without_faults
 from distsys_eval.maelstrom import MaelstromOptions
 from distsys_eval.sandbox import ExecResult
+from distsys_eval.targets import Targets
 from distsys_eval.tasks import TASKS_DIR, load_task
 
 FIXTURES = Path(__file__).parent / "fixtures" / "maelstrom"
@@ -75,6 +77,21 @@ async def test_grading_stops_at_the_first_invalid_run():
 async def test_with_no_faults_to_remove_an_invalid_run_fails_without_faults():
     grade = await grade_attempt(GradingShell(["invalid"]), ECHO)
     assert grade.category == "fails-without-faults" and grade.calm_run is None
+
+
+async def test_a_valid_run_within_the_targets_counts_as_valid():
+    task = replace(ECHO, targets=Targets(msgs_per_op=1))  # the echo results show 0 between nodes
+    assert (await grade_attempt(GradingShell(["valid"] * 3), task)).passed
+
+
+async def test_a_valid_run_over_a_target_is_too_slow_and_stops_grading():
+    task = replace(ECHO, targets=Targets(msgs_per_op=1, max_latency_ms=600))  # echo has no latencies
+    shell = GradingShell(["valid"] * 3)
+    grade = await grade_attempt(shell, task)
+    assert (grade.outcome, grade.category, len(grade.runs)) == ("fail", "too-slow", 1)
+    assert grade.missed == ["max-latency-ms wasn't measured"]
+    assert len(shell.maelstrom_commands()) == 1
+    assert describe(task, grade).splitlines()[-1] == "  too slow: max-latency-ms wasn't measured"
 
 
 async def test_a_run_with_no_verdict_is_a_crash():

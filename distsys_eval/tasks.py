@@ -6,13 +6,15 @@
     task.maelstrom                        the workload and flags each grading run uses
     task.runs                             m: how many runs in a row the attempt must pass
     task.limits                           the agent's time and steps
+    task.targets                          limits on messages and latency, for the tasks that have them
 
 Each task is a directory under tasks/ whose name is its id:
 
     tasks/
       workspace.md        the container and the Go setup, the same for every task
       echo/
-        task.toml         title, runs, agent limits, the Maelstrom workload and flags
+        task.toml         title, runs, agent limits, the Maelstrom workload and flags,
+                          and optionally [targets]
         prompt.md         the problem, in the agent's terms
 
     title = "Echo"
@@ -27,6 +29,13 @@ Each task is a directory under tasks/ whose name is its id:
     node-count = 1
     time-limit = 10
 
+A task that grades efficiency too adds the limits a valid run must stay within (targets.py):
+
+    [targets]
+    msgs-per-op = 30
+    median-latency-ms = 400
+    max-latency-ms = 600
+
 The loader is strict: an unknown key, a flag Maelstrom doesn't take, or a missing file is a
 TaskError naming the task, so a mistake in a task fails when it loads, not halfway through a run.
 """
@@ -39,6 +48,8 @@ from pathlib import Path
 from typing import Any
 
 from distsys_eval.maelstrom import MaelstromOptions, maelstrom_command
+from distsys_eval.targets import KEYS as TARGET_KEYS
+from distsys_eval.targets import Targets
 
 TASKS_DIR = Path(__file__).resolve().parent.parent / "tasks"
 
@@ -47,7 +58,7 @@ TASKS_DIR = Path(__file__).resolve().parent.parent / "tasks"
 BUILD = "go build -o node ."
 BINARY = "./node"
 
-TASK_KEYS = {"title", "runs", "agent", "maelstrom"}
+TASK_KEYS = {"title", "runs", "agent", "maelstrom", "targets"}
 AGENT_KEYS = {"minutes", "steps"}
 
 
@@ -71,6 +82,7 @@ class Task:
     runs: int
     limits: AgentLimits
     path: Path
+    targets: Targets = Targets()
 
 
 def load_tasks(tasks_dir: Path = TASKS_DIR) -> list[Task]:
@@ -92,12 +104,13 @@ def load_task(path: Path) -> Task:
         raise TaskError(f"{task_id}: runs must be at least 1, not {runs}")
     limits = agent_limits(task_id, _get(task_id, config, "agent", dict))
     maelstrom = maelstrom_options(task_id, _get(task_id, config, "maelstrom", dict))
+    limits_on_runs = targets(task_id, config.get("targets", {}))
     prompt = _read(path / "prompt.md").strip()
     if not prompt:
         raise TaskError(f"{task_id}: prompt.md is empty")
     workspace = _read(path.parent / "workspace.md").strip()
-    told = brief(workspace, prompt, maelstrom, runs, limits)
-    return Task(task_id, title, prompt, told, maelstrom, runs, limits, path)
+    told = brief(workspace, prompt, maelstrom, runs, limits, limits_on_runs)
+    return Task(task_id, title, prompt, told, maelstrom, runs, limits, path, limits_on_runs)
 
 
 def agent_limits(task_id: str, table: dict[str, Any]) -> AgentLimits:
@@ -122,8 +135,28 @@ def maelstrom_options(task_id: str, table: dict[str, Any]) -> MaelstromOptions:
         raise TaskError(f"{task_id}: [maelstrom] {e}") from e
 
 
+def targets(task_id: str, table: Any) -> Targets:
+    """The [targets] table: positive limits on a valid run's figures. Absent means none."""
+    if not isinstance(table, dict):
+        raise TaskError(f"{task_id}: targets must be a table")
+    _only(task_id, "[targets]", table, set(TARGET_KEYS))
+    limits = {}
+    for key, field in TARGET_KEYS.items():
+        if key in table:
+            limit = _get(task_id, table, key, (int, float))
+            if limit <= 0:
+                raise TaskError(f"{task_id}: [targets] {key} must be positive")
+            limits[field] = float(limit)
+    return Targets(**limits)
+
+
 def brief(
-    workspace: str, prompt: str, maelstrom: MaelstromOptions, runs: int, limits: AgentLimits
+    workspace: str,
+    prompt: str,
+    maelstrom: MaelstromOptions,
+    runs: int,
+    limits: AgentLimits,
+    targets: Targets,
 ) -> str:
     """What the agent is told. The grading section is generated from the task itself, so it
     always shows the agent's limits and the exact command the attempt will be tested with."""
@@ -137,7 +170,32 @@ def brief(
         "The runs are independent, each with its own timing and faults. The attempt passes only if it "
         "builds and every run is valid."
     )
+    if targets:
+        grading += "\n\n" + targets_section(targets)
     return f"{workspace}\n\n{prompt}\n\n{grading}\n"
+
+
+def targets_section(targets: Targets) -> str:
+    """The targets in the agent's terms, each with where Maelstrom reports it in results.edn."""
+    lines = []
+    if targets.msgs_per_op is not None:
+        lines.append(
+            f"- At most {targets.msgs_per_op:g} messages between nodes per client operation "
+            "(`:net :servers :msgs-per-op`)."
+        )
+    if targets.median_latency_ms is not None:
+        lines.append(
+            f"- A median latency of at most {targets.median_latency_ms:g} ms, from a broadcast being "
+            "acknowledged to its value being in every read (`:workload :stable-latencies` at 0.5)."
+        )
+    if targets.max_latency_ms is not None:
+        lines.append(
+            f"- A maximum latency of at most {targets.max_latency_ms:g} ms (`:stable-latencies` at 1)."
+        )
+    return (
+        "A valid run must also meet these targets, read from Maelstrom's `store/latest/results.edn`:\n\n"
+        + "\n".join(lines)
+    )
 
 
 def _read(path: Path) -> str:
