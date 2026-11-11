@@ -10,6 +10,17 @@ agent solves a task, not just whether it can.
 
 Status: under construction.
 
+## Tasks
+
+Each task is a directory in `tasks/`: a `task.toml` with the Maelstrom workload and flags, how many
+runs in a row an attempt must pass, and the agent's time and step limits, and a `prompt.md` with
+the problem. `tasks/workspace.md` describes the container and is the same for every task.
+
+```sh
+distsys-eval tasks          # list them
+distsys-eval tasks echo     # everything the agent is told, including the exact grading command
+```
+
 ## Development
 
 ```sh
