@@ -1,5 +1,7 @@
 """The command line: it starts, prints its version, and shows help with no command."""
 
+import json
+
 import pytest
 
 from distsys_eval import __version__
@@ -131,3 +133,18 @@ def test_run_prints_each_attempt_then_the_totals(monkeypatch, capsys):
     assert capsys.readouterr().out.splitlines()[1:] == [
         "echo #1: pass", "echo #2: pass", "2 attempts: 2 passed, 0 failed, 0 errors (not scored)",
     ]
+
+
+def test_report_prints_a_table_or_json(tmp_path, capsys):
+    from distsys_eval.results import AttemptResult, append
+
+    append(tmp_path / "results.jsonl", AttemptResult("echo", 1, "shellmate/fake", "pass"))
+    assert main(["report", str(tmp_path)]) == 0
+    assert capsys.readouterr().out.startswith("shellmate/fake\n")
+    assert main(["report", str(tmp_path), "--json"]) == 0
+    assert json.loads(capsys.readouterr().out)[0]["agent"] == "shellmate/fake"
+
+
+def test_report_says_so_when_a_directory_has_no_results(tmp_path, capsys):
+    assert main(["report", str(tmp_path)]) == 2
+    assert "no results in" in capsys.readouterr().err
