@@ -172,6 +172,14 @@ def test_report_prints_a_table_or_json(tmp_path, capsys):
     assert json.loads(capsys.readouterr().out)[0]["agent"] == "shellmate/fake"
 
 
+def test_report_can_draw_the_chart(tmp_path, capsys):
+    from distsys_eval.results import AttemptResult, append
+
+    append(tmp_path / "results.jsonl", AttemptResult("echo", 1, "shellmate/fake", "pass"))
+    assert main(["report", str(tmp_path), "--chart", str(tmp_path / "pass-k.svg")]) == 0
+    assert (tmp_path / "pass-k.svg").read_text().startswith("<svg")
+
+
 def test_report_says_so_when_a_directory_has_no_results(tmp_path, capsys):
     assert main(["report", str(tmp_path)]) == 2
     assert "no results in" in capsys.readouterr().err
