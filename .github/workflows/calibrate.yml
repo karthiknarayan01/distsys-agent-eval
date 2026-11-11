@@ -1,0 +1,42 @@
+# Run by hand from the Actions tab. Measures every task in the sandbox image and uploads the
+# calibration.toml and task.toml files it writes, to be committed with the change they belong to.
+name: calibrate
+
+on:
+  workflow_dispatch:
+    inputs:
+      trials:
+        description: Maelstrom runs per reference and mutant
+        default: "20"
+      tasks:
+        description: Task ids, space-separated (empty for every task)
+        default: ""
+
+jobs:
+  calibrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install
+        run: pip install -e ".[dev]"
+      - name: Build the sandbox image
+        run: distsys-eval build-image --tag distsys-agent-eval/sandbox:ci
+      - name: Calibrate
+        run: >-
+          distsys-eval calibrate ${{ inputs.tasks }} --write --jobs 3
+          --trials ${{ inputs.trials }} --image distsys-agent-eval/sandbox:ci
+      - name: Show what changed
+        if: always()
+        run: git status --short tasks && git diff tasks
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: calibration
+          path: |
+            tasks/*/calibration.toml
+            tasks/*/task.toml
