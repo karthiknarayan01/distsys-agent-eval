@@ -42,6 +42,7 @@ from distsys_eval.validate import Subject, materialize, subjects
 
 TARGET = 0.99  # the chance that m runs catch each mutant
 Z_95 = 1.645  # one-sided 95% normal quantile, for the lower confidence bound
+ERROR_CHARS = 200  # of a checker's exception, in the summary
 MAX_RUNS = 20  # beyond this a mutant is too rarely caught to be useful; fix the task instead
 
 
@@ -127,11 +128,14 @@ async def measure(shell: Shell, subject: Subject, trials: int, grade_dir: str = 
 
 def why_undecided(run: MaelstromResult) -> str:
     """Which checkers couldn't decide a run, each with the part of it that couldn't, or the
-    anomalies it names: "perf (latency-graph)", "workload (cycle-search-timeout)"."""
+    anomalies it names, or the exception it threw: "perf (latency-graph)", "workload (error: ...)"."""
     reasons = []
     for name in run.undecided or ["?"]:
         checker = run.results.get(name, {})
-        parts = [key for key, value in checker.items() if isinstance(value, dict) and undecided(value)]
+        parts = [key for key, value in checker.items() if key != "error" and isinstance(value, dict)
+                 and undecided(value)]
+        if isinstance(checker.get("error"), dict):  # the checker threw: Maelstrom keeps the cause
+            parts.append(f"error: {str(checker['error'].get('cause', '?'))[:ERROR_CHARS]}")
         parts += [str(anomaly) for anomaly in checker.get("anomaly-types") or []]
         reasons.append(name + (f" ({', '.join(parts)})" if parts else ""))
     return ", ".join(reasons)

@@ -93,6 +93,15 @@ def test_a_task_needs_the_largest_m_any_of_its_mutants_needs():
     assert calibration(mutant_built=False).runs is None
 
 
+def test_a_checker_that_threw_is_named_with_its_cause():
+    from distsys_eval.calibrate import why_undecided
+    from distsys_eval.maelstrom import MaelstromResult
+
+    run = MaelstromResult("unknown", [], ["workload"], {"workload": {"valid?": "unknown",
+                          "error": {"cause": "Java heap space", "via": []}}}, 2, False, "")
+    assert why_undecided(run) == "workload (error: Java heap space)"
+
+
 def test_the_summary_says_why_runs_went_undecided():
     measured = replace(calibration().mutants[0], undecided=Counter({"workload (cycle-search-timeout)": 4}))
     text = summary([replace(calibration(), mutants=[measured])])
