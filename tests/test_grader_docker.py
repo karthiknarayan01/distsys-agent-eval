@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from distsys_eval.grader import grade_directory
+from distsys_eval.maelstrom import MaelstromOptions, Rename
 from distsys_eval.tasks import TASKS_DIR, load_task
 
 IMAGE = os.environ.get("SANDBOX_TEST_IMAGE")
@@ -38,3 +39,22 @@ async def test_code_that_doesnt_compile_doesnt_build(tmp_path):
     grade = await grade_directory(ECHO, tmp_path, IMAGE)
     assert (grade.outcome, grade.category) == ("fail", "doesnt-build")
     assert "main.go" in grade.build.output
+
+
+RENAMED_ECHO = replace(
+    ECHO,
+    runs=1,
+    maelstrom=MaelstromOptions(
+        "echo", ECHO.maelstrom.flags, Rename({"echo": "say", "echo_ok": "said"}, {"echo": "words"})
+    ),
+)
+
+
+async def test_a_node_that_speaks_the_renamed_protocol_passes_through_the_renamer():
+    grade = await grade_directory(RENAMED_ECHO, NODES / "echo-go-renamed", IMAGE)
+    assert grade.passed, [run.output for run in grade.runs]
+
+
+async def test_a_node_that_speaks_maelstroms_own_names_fails_a_renamed_task():
+    grade = await grade_directory(RENAMED_ECHO, NODES / "echo-go", IMAGE)
+    assert grade.outcome == "fail"

@@ -5,7 +5,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from distsys_eval.grader import describe, grade_attempt, without_faults
-from distsys_eval.maelstrom import MaelstromOptions
+from distsys_eval.maelstrom import MaelstromOptions, Rename
 from distsys_eval.sandbox import ExecResult
 from distsys_eval.targets import Targets
 from distsys_eval.tasks import TASKS_DIR, load_task
@@ -124,6 +124,12 @@ def test_without_faults_keeps_everything_but_the_nemesis():
     options = MaelstromOptions("broadcast", {"node-count": 5, "nemesis": "partition", "nemesis-interval": 3})
     assert without_faults(options) == MaelstromOptions("broadcast", {"node-count": 5})
     assert without_faults(MaelstromOptions("echo", {"node-count": 1})) is None
+
+
+def test_without_faults_keeps_the_renamed_protocol():
+    rename = Rename({"broadcast": "spread"})
+    options = MaelstromOptions("broadcast", {"nemesis": "partition"}, rename)
+    assert without_faults(options).rename == rename
 
 
 async def test_describe_a_pass_and_a_diagnosed_failure():

@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from distsys_eval.maelstrom import Rename
 from distsys_eval.sandbox import DOCKERFILE_DIR
 from distsys_eval.targets import Targets
 from distsys_eval.tasks import TASKS_DIR, TaskError, load_task, load_tasks
@@ -101,6 +102,30 @@ def test_a_good_task_loads(tmp_path):
     assert task.targets == Targets()
 
 
+RENAME = """
+[rename.types]
+echo = "say"
+echo_ok = "said"
+
+[rename.fields]
+echo = "words"
+"""
+
+
+def test_a_renamed_protocol_loads_and_the_brief_shows_how_to_test_it(tmp_path):
+    task = load_task(make_task(tmp_path, GOOD_TOML + RENAME))
+    assert task.maelstrom.rename == Rename({"echo": "say", "echo_ok": "said"}, {"echo": "words"})
+    assert "MAELSTROM_RENAME_BIN=/work/node" in task.brief
+    assert "--bin /usr/local/bin/maelstrom-rename" in task.brief
+    assert "Maelstrom itself uses other names for these messages" in task.brief
+
+
+def test_a_task_without_a_rename_tests_its_binary_directly(tmp_path):
+    task = load_task(make_task(tmp_path))
+    assert task.maelstrom.rename is None
+    assert "--bin ./node" in task.brief and "maelstrom-rename" not in task.brief
+
+
 def test_targets_load_as_numbers(tmp_path):
     toml = GOOD_TOML + "\n[targets]\nmsgs-per-op = 20\nmax-latency-ms = 2000.5\n"
     task = load_task(make_task(tmp_path, toml))
@@ -121,6 +146,11 @@ def test_targets_load_as_numbers(tmp_path):
         (("node-count = 1", "nodes = 1"), "not Maelstrom test flags: nodes"),
         (("runs = 2", "runs = = 2"), "task.toml:"),
         (("runs = 2", "runs = 2\ntargets = 3"), "targets must be a table"),
+        (("runs = 2", "runs = 2\nrename = 3"), "rename must be a table"),
+        (("[agent]", "[rename]\nnames = {}\n\n[agent]"), "[rename] has unknown keys: names"),
+        (("[agent]", "[rename]\ntypes = {}\n\n[agent]"), "[rename] renames nothing"),
+        (("[agent]", '[rename.types]\necho = 1\n\n[agent]'), "[rename.types] must map names to names"),
+        (("[agent]", '[rename.types]\na = "x"\nb = "x"\n\n[agent]'), "renames two names to the same one"),
         (("[agent]", "[targets]\nlatency = 1\n\n[agent]"), "[targets] has unknown keys: latency"),
         (("[agent]", "[targets]\nmsgs-per-op = 0\n\n[agent]"), "[targets] msgs-per-op must be positive"),
         (("[agent]", '[targets]\nmsgs-per-op = "9"\n\n[agent]'), "msgs-per-op is missing or has the wrong"),
