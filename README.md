@@ -21,6 +21,13 @@ a value may take to spread. And it can rename Maelstrom's message types and fiel
 protocol isn't one an agent may have memorized: grading then puts `maelstrom-rename`
 (`docker/rename/`) between Maelstrom and the program to translate.
 
+The public challenges and their solutions are on GitHub, so an agent may pass a task from
+memory. Some tasks therefore have a variant (`tasks/*-variant/`): the same problem under new
+names and a different cluster size, say a box office issuing tickets instead of nodes generating
+IDs. A variant uses its original's reference and mutants, with the names changed in the code to
+match, so it is checked as thoroughly. `report` sets each original and its variant side by side;
+an agent that does much worse on the variant was likely recalling rather than solving.
+
 ```sh
 distsys-eval tasks          # list them
 distsys-eval tasks echo     # everything the agent is told, including the exact grading command

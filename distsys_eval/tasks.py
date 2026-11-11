@@ -7,6 +7,7 @@
     task.runs                             m: how many runs in a row the attempt must pass
     task.limits                           the agent's time and steps
     task.targets                          limits on messages and latency, for the tasks that have them
+    task.variant_of                       the task this one is a variant of, or None
 
 Each task is a directory under tasks/ whose name is its id:
 
@@ -40,6 +41,14 @@ translates between the two while the task is graded:
     [rename.fields]
     echo = "words"
 
+A variant is a task made from another to break recall: the same problem under new names, often
+with a different cluster. It names its original, and has no reference or mutants of its own:
+validate and calibrate use the original's, with the protocol's names changed in the code to
+match (validate.py). So each name a variant renames as both a type and a field must get the
+same new name in both.
+
+    variant-of = "g-counter"
+
 A task that grades efficiency too adds the limits a valid run must stay within (targets.py):
 
     [targets]
@@ -70,7 +79,7 @@ BUILD = "go build -o node ."
 BINARY = "./node"
 WORKSPACE_BINARY = "/work/node"  # the same, as maelstrom-rename needs it: an absolute path
 
-TASK_KEYS = {"title", "runs", "agent", "maelstrom", "targets", "rename"}
+TASK_KEYS = {"title", "runs", "agent", "maelstrom", "targets", "rename", "variant-of"}
 AGENT_KEYS = {"minutes", "steps"}
 
 
@@ -95,6 +104,7 @@ class Task:
     limits: AgentLimits
     path: Path
     targets: Targets = Targets()
+    variant_of: str | None = None
 
 
 def load_tasks(tasks_dir: Path = TASKS_DIR) -> list[Task]:
@@ -117,12 +127,13 @@ def load_task(path: Path) -> Task:
     limits = agent_limits(task_id, _get(task_id, config, "agent", dict))
     maelstrom = maelstrom_options(task_id, _get(task_id, config, "maelstrom", dict), config.get("rename"))
     limits_on_runs = targets(task_id, config.get("targets", {}))
+    original = variant_of(task_id, config.get("variant-of"), path.parent, maelstrom)
     prompt = _read(path / "prompt.md").strip()
     if not prompt:
         raise TaskError(f"{task_id}: prompt.md is empty")
     workspace = _read(path.parent / "workspace.md").strip()
     told = brief(workspace, prompt, maelstrom, runs, limits, limits_on_runs)
-    return Task(task_id, title, prompt, told, maelstrom, runs, limits, path, limits_on_runs)
+    return Task(task_id, title, prompt, told, maelstrom, runs, limits, path, limits_on_runs, original)
 
 
 def agent_limits(task_id: str, table: dict[str, Any]) -> AgentLimits:
@@ -183,6 +194,22 @@ def targets(task_id: str, table: Any) -> Targets:
                 raise TaskError(f"{task_id}: [targets] {key} must be positive")
             limits[field] = float(limit)
     return Targets(**limits)
+
+
+def variant_of(task_id: str, value: Any, tasks_dir: Path, maelstrom: MaelstromOptions) -> str | None:
+    """variant-of: an existing task with a reference, whose names this one's rename can be
+    written into the original's code without a name meaning two things."""
+    if value is None:
+        return None
+    if not isinstance(value, str) or not (tasks_dir / value / "reference").is_dir():
+        raise TaskError(f"{task_id}: variant-of must name a task with a reference/")
+    if maelstrom.rename:
+        types, fields = maelstrom.rename.types, maelstrom.rename.fields
+        clashes = sorted(name for name in set(types) & set(fields) if types[name] != fields[name])
+        if clashes:
+            raise TaskError(f"{task_id}: a variant must rename {', '.join(clashes)} the same as a type "
+                            "and as a field")
+    return value
 
 
 def brief(
