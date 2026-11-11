@@ -75,7 +75,18 @@ distsys-eval grade echo path/to/solution    # grade a directory in a fresh sandb
 
 ## Running an agent
 
-`run` makes n attempts at each task, each in a fresh sandbox, and grades each one as it ends.
+The quick way is `./eval.sh`. It sets everything up (a virtual environment, Docker and the
+sandbox image, Ollama and the models), asks which models to run and how many attempts, runs
+them, and writes every agent's table to `results/report.txt` and a chart to `results/pass-k.svg`:
+
+```sh
+./eval.sh                                        # asks
+./eval.sh --models qwen3.5:9b --yes              # no questions
+./eval.sh --models qwen3.5:4b,qwen3.5:9b --attempts 3 --tasks "echo unique-ids"
+```
+
+Underneath, `run` makes n attempts at each task, each in a fresh sandbox, and grades each one as
+it ends.
 
 ```sh
 ollama pull qwen3.5:9b
