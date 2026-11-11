@@ -1,0 +1,94 @@
+{:perf {:latency-graph {:valid? true},
+        :rate-graph {:valid? true},
+        :valid? true},
+ :timeline {:valid? true},
+ :exceptions {:valid? true},
+ :stats {:valid? true,
+         :count 14,
+         :ok-count 14,
+         :fail-count 0,
+         :info-count 0,
+         :by-f {:echo {:valid? true,
+                       :count 14,
+                       :ok-count 14,
+                       :fail-count 0,
+                       :info-count 0}}},
+ :availability {:valid? true, :ok-fraction 1.0},
+ :net {:all {:send-count 30,
+             :recv-count 30,
+             :msg-count 30,
+             :msgs-per-op 2.142857},
+       :clients {:send-count 30, :recv-count 30, :msg-count 30},
+       :servers {:send-count 0,
+                 :recv-count 0,
+                 :msg-count 0,
+                 :msgs-per-op 0.0},
+       :valid? true},
+ :workload {:valid? false,
+            :errors (["Expected a message with :echo"
+                      "Please echo 100"
+                      "But received"
+                      {:type "echo_ok", :echo "wrong", :in_reply_to 4}]
+                     ["Expected a message with :echo"
+                      "Please echo 10"
+                      "But received"
+                      {:type "echo_ok", :echo "wrong", :in_reply_to 5}]
+                     ["Expected a message with :echo"
+                      "Please echo 70"
+                      "But received"
+                      {:type "echo_ok", :echo "wrong", :in_reply_to 2}]
+                     ["Expected a message with :echo"
+                      "Please echo 89"
+                      "But received"
+                      {:type "echo_ok",
+                       :echo "wrong",
+                       :in_reply_to 14}]
+                     ["Expected a message with :echo"
+                      "Please echo 32"
+                      "But received"
+                      {:type "echo_ok", :echo "wrong", :in_reply_to 3}]
+                     ["Expected a message with :echo"
+                      "Please echo 60"
+                      "But received"
+                      {:type "echo_ok", :echo "wrong", :in_reply_to 7}]
+                     ["Expected a message with :echo"
+                      "Please echo 61"
+                      "But received"
+                      {:type "echo_ok",
+                       :echo "wrong",
+                       :in_reply_to 12}]
+                     ["Expected a message with :echo"
+                      "Please echo 93"
+                      "But received"
+                      {:type "echo_ok",
+                       :echo "wrong",
+                       :in_reply_to 13}]
+                     ["Expected a message with :echo"
+                      "Please echo 51"
+                      "But received"
+                      {:type "echo_ok", :echo "wrong", :in_reply_to 9}]
+                     ["Expected a message with :echo"
+                      "Please echo 43"
+                      "But received"
+                      {:type "echo_ok", :echo "wrong", :in_reply_to 1}]
+                     ["Expected a message with :echo"
+                      "Please echo 101"
+                      "But received"
+                      {:type "echo_ok",
+                       :echo "wrong",
+                       :in_reply_to 10}]
+                     ["Expected a message with :echo"
+                      "Please echo 116"
+                      "But received"
+                      {:type "echo_ok",
+                       :echo "wrong",
+                       :in_reply_to 11}]
+                     ["Expected a message with :echo"
+                      "Please echo 21"
+                      "But received"
+                      {:type "echo_ok", :echo "wrong", :in_reply_to 6}]
+                     ["Expected a message with :echo"
+                      "Please echo 85"
+                      "But received"
+                      {:type "echo_ok", :echo "wrong", :in_reply_to 8}])},
+ :valid? false}

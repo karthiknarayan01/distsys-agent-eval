@@ -1,64 +1,49 @@
-"""The real sandbox image: it holds the toolchain, and a Maelstrom node builds and passes a
-test with no network. Run when SANDBOX_TEST_IMAGE is the built sandbox image; skipped otherwise,
-or when the image has no Go."""
+"""The real sandbox image: a Go node builds with no network, and Maelstrom grades it there.
+Run when SANDBOX_TEST_IMAGE is the built sandbox image; skipped otherwise, or when the image
+has no Go."""
 
 import os
+from pathlib import Path
 
 import pytest
 
+from distsys_eval.maelstrom import MaelstromOptions, run_maelstrom
 from distsys_eval.sandbox import Sandbox, SandboxConfig
 
 IMAGE = os.environ.get("SANDBOX_TEST_IMAGE")
+NODES = Path(__file__).parent / "nodes"
 pytestmark = [
     pytest.mark.docker,
     pytest.mark.skipif(not IMAGE, reason="set SANDBOX_TEST_IMAGE to the sandbox image to run these"),
 ]
-
-ECHO_NODE = """\
-package main
-
-import (
-\t"encoding/json"
-\t"log"
-
-\tmaelstrom "github.com/jepsen-io/maelstrom/demo/go"
-)
-
-func main() {
-\tn := maelstrom.NewNode()
-\tn.Handle("echo", func(msg maelstrom.Message) error {
-\t\tvar body map[string]any
-\t\tif err := json.Unmarshal(msg.Body, &body); err != nil {
-\t\t\treturn err
-\t\t}
-\t\tbody["type"] = "echo_ok"
-\t\treturn n.Reply(msg, body)
-\t})
-\tif err := n.Run(); err != nil {
-\t\tlog.Fatal(err)
-\t}
-}
-"""
-
-GO_MOD = """\
-module echo
-
-go 1.27
-
-require github.com/jepsen-io/maelstrom/demo/go v0.0.0-20260710121306-480a8197026d
-"""
+ECHO = MaelstromOptions("echo", {"node-count": 1, "time-limit": 5})
 
 
-async def test_an_echo_node_builds_offline_and_passes_maelstrom():
+async def build(box: Sandbox, node: str) -> None:
+    if not (await box.exec("command -v go", timeout=10)).ok:
+        pytest.skip(f"{IMAGE} has no Go: not the sandbox image")
+    await box.copy_in(NODES / node, node)
+    built = await box.exec(f"cd {node} && go build -o node .", timeout=300)
+    assert built.ok, built.output
+
+
+async def test_a_correct_node_builds_offline_and_maelstrom_says_valid():
     async with Sandbox.start(SandboxConfig(image=IMAGE)) as box:
-        if not (await box.exec("command -v go", timeout=10)).ok:
-            pytest.skip(f"{IMAGE} has no Go: not the sandbox image")
-        await box.write_file("go.mod", GO_MOD)
-        await box.write_file("main.go", ECHO_NODE)
-        built = await box.exec("go build -o node .", timeout=300)
-        assert built.ok, built.output
-        tested = await box.exec(
-            "maelstrom test -w echo --bin ./node --node-count 1 --time-limit 5", timeout=300
-        )
-    assert tested.ok, tested.output
-    assert "Everything looks good" in tested.output
+        await build(box, "echo-go")
+        result = await run_maelstrom(box, "/work/echo-go/node", ECHO, run_dir="runs/1")
+    assert result.verdict == "valid", result.output
+
+
+async def test_a_wrong_node_is_invalid_on_the_workload():
+    async with Sandbox.start(SandboxConfig(image=IMAGE)) as box:
+        await build(box, "echo-go-wrong")
+        result = await run_maelstrom(box, "/work/echo-go-wrong/node", ECHO, run_dir="runs/1")
+    assert result.verdict == "invalid" and result.failed == ["workload"], result.output
+
+
+async def test_a_binary_that_isnt_there_is_a_crash():
+    async with Sandbox.start(SandboxConfig(image=IMAGE)) as box:
+        if not (await box.exec("command -v maelstrom", timeout=10)).ok:
+            pytest.skip(f"{IMAGE} has no Maelstrom: not the sandbox image")
+        result = await run_maelstrom(box, "/work/missing", ECHO, run_dir="runs/1")
+    assert result.verdict == "crashed"
