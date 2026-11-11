@@ -107,3 +107,27 @@ def test_calibrate_writes_only_with_write_and_exits_1_when_a_task_has_no_m(monke
     assert main(["calibrate", "echo", "--trials", "7", "--write"]) == 1
     assert len(written) == 1 and written[0].runs == 3
     assert "no m is enough" in capsys.readouterr().out
+
+
+def test_run_says_so_when_the_provider_cant_be_used(monkeypatch, capsys):
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+    assert main(["run", "--provider", "deepseek"]) == 2
+    assert "DEEPSEEK_API_KEY is not set" in capsys.readouterr().err
+
+
+def test_run_prints_each_attempt_then_the_totals(monkeypatch, capsys):
+    from distsys_eval.results import AttemptResult
+
+    async def fake_run(agent, tasks, attempts, out, jobs, sandbox, on_result):
+        assert (agent.name, attempts, jobs) == ("shellmate/ollama/qwen3.5:4b", 2, 1)
+        assert out.as_posix() == "results/shellmate-ollama-qwen3.5-4b"
+        results = [AttemptResult("echo", n, agent.name, "pass") for n in (1, 2)]
+        for result in results:
+            on_result(result)
+        return results
+
+    monkeypatch.setattr("distsys_eval.runner.run", fake_run)
+    assert main(["run", "echo", "--provider", "ollama", "--model", "qwen3.5:4b", "--attempts", "2"]) == 0
+    assert capsys.readouterr().out.splitlines()[1:] == [
+        "echo #1: pass", "echo #2: pass", "2 attempts: 2 passed, 0 failed, 0 errors (not scored)",
+    ]

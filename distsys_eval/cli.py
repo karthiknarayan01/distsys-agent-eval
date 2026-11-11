@@ -7,6 +7,8 @@
     distsys-eval grade echo DIR   grade a Go program in DIR as an attempt at a task
     distsys-eval validate         check that references pass and mutants fail
     distsys-eval calibrate        measure how often one run catches each mutant, and choose m
+    distsys-eval run --provider ollama
+                                  n attempts by an agent at every task, graded, into results/
 """
 
 from __future__ import annotations
@@ -17,10 +19,12 @@ import subprocess
 import sys
 from pathlib import Path
 
-from distsys_eval import __version__
+from distsys_eval import __version__, runner
 from distsys_eval import calibrate as calibration
 from distsys_eval.grader import describe, grade_directory
+from distsys_eval.results import line, totals
 from distsys_eval.sandbox import DOCKERFILE_DIR, IMAGE
+from distsys_eval.shellmate import ShellmateAgent
 from distsys_eval.tasks import TASKS_DIR, load_tasks
 from distsys_eval.validate import summary, validate
 
@@ -65,6 +69,16 @@ def build_parser() -> argparse.ArgumentParser:
     calibrate.add_argument("--image", default=IMAGE, help=f"sandbox image (default {IMAGE})")
     calibrate.add_argument("--write", action="store_true", help="record the counts and set m")
     calibrate.set_defaults(run=calibrate_command)
+    attempts = commands.add_parser("run", help="run an agent's attempts at the tasks and grade them")
+    attempts.add_argument("tasks", nargs="*", help="task ids (default: every task)")
+    attempts.add_argument("--provider", required=True, choices=["ollama", "deepseek", "anthropic"],
+                          help="the model provider Shellmate uses")
+    attempts.add_argument("--model", help="the provider's model (default: Shellmate's for that provider)")
+    attempts.add_argument("--attempts", type=int, default=5, help="attempts per task (default 5)")
+    attempts.add_argument("--out", type=Path, help="results directory (default results/<agent>)")
+    attempts.add_argument("--jobs", type=int, default=1, help="attempts to run at once (default 1)")
+    attempts.add_argument("--image", default=IMAGE, help=f"sandbox image (default {IMAGE})")
+    attempts.set_defaults(run=run_command)
     return parser
 
 
@@ -127,6 +141,31 @@ def calibrate_command(args: argparse.Namespace) -> int:
         for result in usable:
             calibration.write(result)
     return 0 if len(usable) == len(results) else 1
+
+
+def run_command(args: argparse.Namespace) -> int:
+    """Run every attempt not yet in the results directory, printing each as it ends, then the
+    totals. Started again with the same directory, it carries on where it stopped."""
+    chosen = pick_tasks(args.tasks)
+    if chosen is None:
+        return 2
+    try:
+        agent = ShellmateAgent.from_provider(args.provider, args.model)
+    except (RuntimeError, ValueError) as e:  # e.g. an API key that isn't set
+        print(e, file=sys.stderr)
+        return 2
+    out = args.out or Path("results") / agent.name.replace("/", "-").replace(":", "-")
+    print(f"{agent.name}: {args.attempts} attempts at {len(chosen)} tasks, into {out}")
+    try:
+        results = asyncio.run(runner.run(
+            agent, chosen, args.attempts, out, args.jobs, runner.sandboxes(args.image),
+            on_result=lambda result: print(line(result), flush=True),
+        ))
+    except runner.RunnerError as e:
+        print(e, file=sys.stderr)
+        return 2
+    print(totals(results))
+    return 0
 
 
 def pick_tasks(task_ids: list[str]) -> list | None:

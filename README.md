@@ -45,6 +45,28 @@ and isn't counted against the agent.
 distsys-eval grade echo path/to/solution    # grade a directory in a fresh sandbox
 ```
 
+## Running an agent
+
+`run` makes n attempts at each task, each in a fresh sandbox, and grades each one as it ends.
+
+```sh
+ollama pull qwen3.5:9b
+distsys-eval run --provider ollama --attempts 5             # every task
+distsys-eval run echo --provider deepseek --jobs 2          # one task, two attempts at a time
+```
+
+Everything goes into `results/<agent>/` (or `--out`):
+
+```
+results.jsonl          one line per attempt: outcome, failure category, steps, tokens, time
+transcripts/echo-1.jsonl   everything the agent did in attempt 1 at echo
+code/echo-1/           what it left in the working directory
+```
+
+An attempt the harness let down is recorded as an `error` and isn't scored: Docker failed, the
+model couldn't be reached, or Maelstrom couldn't decide a run. Running the same command again
+carries on: attempts already recorded are kept, and only missing ones and errors are run again.
+
 ## Trusting the grader
 
 Every task carries code whose grade is known: `reference/`, a correct solution that must pass,
