@@ -7,9 +7,11 @@ ARG MAELSTROM_VERSION=0.2.4
 ARG MAELSTROM_SHA256=301ec71d6b12af0d765edb413f5cf5aa1046b5609bd4e31376a0b549548e5799
 ARG MAELSTROM_GO_VERSION=v0.0.0-20260710121306-480a8197026d
 
-# Maelstrom is a Clojure program: it needs a JVM, and gnuplot for its latency graphs.
+# Maelstrom is a Clojure program: it needs a JVM, gnuplot for its latency graphs, and Graphviz,
+# whose dot the transaction checker runs to draw what it found. Without either, the checker
+# that needs it can't decide and the run comes out unknown.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends default-jre-headless gnuplot-nox bzip2 \
+ && apt-get install -y --no-install-recommends default-jre-headless gnuplot-nox graphviz bzip2 \
  && rm -rf /var/lib/apt/lists/*
 
 RUN curl -fsSL -o /tmp/maelstrom.tar.bz2 \
