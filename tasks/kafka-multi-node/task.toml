@@ -1,5 +1,5 @@
 title = "Kafka-style log across two nodes"
-runs = 3
+runs = 4
 
 [agent]
 minutes = 45

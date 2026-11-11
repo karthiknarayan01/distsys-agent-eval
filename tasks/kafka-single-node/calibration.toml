@@ -1,0 +1,16 @@
+# Written by distsys-eval calibrate: how often one Maelstrom run of this task failed each
+# subject. task.toml's runs is the smallest m that catches every mutant 99% of the time.
+trials = 20
+runs = 3
+
+[reference]
+failed = 0
+decided = 20
+
+[mutants."offset-from-one"]
+caught = 20
+decided = 20
+
+[mutants."poll-skips-requested"]
+caught = 17
+decided = 17
