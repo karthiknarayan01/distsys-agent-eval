@@ -1,0 +1,14 @@
+Copies the payload from a field named message instead of echo, so every reply echoes null.
+
+diff --git a/main.go b/main.go
+index 8753bda..4f97f81 100644
+--- a/main.go
++++ b/main.go
+@@ -25,6 +25,7 @@ func main() {
+ 
+ 		// Update the message type to return back.
+ 		body["type"] = "echo_ok"
++		body["echo"] = body["message"]
+ 
+ 		// Echo the original message back with the updated message type.
+ 		return n.Reply(msg, body)

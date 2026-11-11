@@ -33,6 +33,18 @@ and isn't counted against the agent.
 distsys-eval grade echo path/to/solution    # grade a directory in a fresh sandbox
 ```
 
+## Trusting the grader
+
+Every task carries code whose grade is known: `reference/`, a correct solution that must pass,
+and `mutants/*.patch`, copies of it with one realistic bug each, which must fail (and not just
+fail to build). `validate` grades them all and says which came out wrong. CI runs it on every
+change, so a change to a task can't quietly weaken its grading.
+
+```sh
+distsys-eval validate --jobs 3          # every task
+distsys-eval validate unique-ids        # one task
+```
+
 ## Development
 
 ```sh

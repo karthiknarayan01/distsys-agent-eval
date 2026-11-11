@@ -5,6 +5,7 @@
     distsys-eval tasks            list the tasks
     distsys-eval tasks echo       show what the agent is told for one task
     distsys-eval grade echo DIR   grade a Go program in DIR as an attempt at a task
+    distsys-eval validate         check that references pass and mutants fail
 """
 
 from __future__ import annotations
@@ -19,6 +20,7 @@ from distsys_eval import __version__
 from distsys_eval.grader import describe, grade_directory
 from distsys_eval.sandbox import DOCKERFILE_DIR, IMAGE
 from distsys_eval.tasks import TASKS_DIR, load_tasks
+from distsys_eval.validate import summary, validate
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -49,6 +51,11 @@ def build_parser() -> argparse.ArgumentParser:
     grade.add_argument("dir", type=Path, help="a directory holding a Go program")
     grade.add_argument("--image", default=IMAGE, help=f"sandbox image (default {IMAGE})")
     grade.set_defaults(run=grade_command)
+    check = commands.add_parser("validate", help="check that each task's references pass and mutants fail")
+    check.add_argument("tasks", nargs="*", help="task ids (default: every task)")
+    check.add_argument("--jobs", type=int, default=1, help="sandboxes to run at once (default 1)")
+    check.add_argument("--image", default=IMAGE, help=f"sandbox image (default {IMAGE})")
+    check.set_defaults(run=validate_command)
     return parser
 
 
@@ -84,3 +91,17 @@ def grade_command(args: argparse.Namespace) -> int:
     grade = asyncio.run(grade_directory(tasks[args.task], args.dir, args.image))
     print(describe(tasks[args.task], grade))
     return 0 if grade.passed else 1
+
+
+def validate_command(args: argparse.Namespace) -> int:
+    """Grade every reference and mutant and print how each came out; exits 0 only if all were
+    graded as expected."""
+    tasks = {task.id: task for task in load_tasks(TASKS_DIR)}
+    unknown = [task_id for task_id in args.tasks if task_id not in tasks]
+    if unknown:
+        print(f"no task {', '.join(map(repr, unknown))}; the tasks are: {', '.join(tasks)}", file=sys.stderr)
+        return 2
+    chosen = [tasks[task_id] for task_id in args.tasks] or list(tasks.values())
+    checks = asyncio.run(validate(chosen, args.image, args.jobs))
+    print(summary(checks))
+    return 0 if all(check.ok for check in checks) else 1

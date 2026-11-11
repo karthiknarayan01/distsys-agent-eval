@@ -1,0 +1,15 @@
+Declares the sequence inside nextID, shadowing the shared one, so it restarts at 1 on every
+call: two IDs minted on one node in the same millisecond are equal.
+
+diff --git a/main.go b/main.go
+index 3ebaafd..fd5af3e 100644
+--- a/main.go
++++ b/main.go
+@@ -93,6 +93,7 @@ var (
+ func nextID(nodeID uint64) uint64 {
+ 	mu.Lock()
+ 	defer mu.Unlock()
++	var seq uint64
+ 
+ 	// Lazy one-time seed.
+ 	if lastMS == 0 {

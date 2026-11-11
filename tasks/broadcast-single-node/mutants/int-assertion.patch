@@ -1,0 +1,18 @@
+Reads the client's value with an .(int) type assertion. JSON numbers decode as float64, so the
+assertion always fails and nothing is stored.
+
+diff --git a/gossip.go b/gossip.go
+index 9bf0b77..61b48a2 100644
+--- a/gossip.go
++++ b/gossip.go
+@@ -60,8 +60,8 @@ func handleBroadcast(msg maelstrom.Message) error {
+ // nodes carry a list under "messages".
+ func numbersFromBody(body map[string]any) []int {
+ 	numbers := []int{}
+-	if f, ok := body["message"].(float64); ok {
+-		numbers = append(numbers, int(f))
++	if m, ok := body["message"].(int); ok {
++		numbers = append(numbers, m)
+ 	}
+ 	if list, ok := body["messages"].([]any); ok {
+ 		for _, v := range list {
