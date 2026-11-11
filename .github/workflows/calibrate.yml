@@ -3,6 +3,8 @@
 name: calibrate
 
 on:
+  push:
+    branches: [calibrate-run]
   workflow_dispatch:
     inputs:
       trials:
@@ -29,7 +31,7 @@ jobs:
       - name: Calibrate
         run: >-
           distsys-eval calibrate ${{ inputs.tasks }} --write --jobs 3
-          --trials ${{ inputs.trials }} --image distsys-agent-eval/sandbox:ci
+          --trials ${{ inputs.trials || 20 }} --image distsys-agent-eval/sandbox:ci
       - name: Show what changed
         if: always()
         run: git status --short tasks && git diff tasks
