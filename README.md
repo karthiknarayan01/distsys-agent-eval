@@ -100,6 +100,7 @@ carries on: attempts already recorded are kept, and only missing ones and errors
 ```sh
 distsys-eval report results/shellmate-ollama-qwen3.5-9b     # a table per agent
 distsys-eval report results/* --json                        # every number, for other tools
+distsys-eval report results/* --chart results/pass-k.svg    # and a chart of overall pass^k
 ```
 
 For each task the report gives pass^k: the chance that k of its attempts, drawn at random, all
@@ -111,6 +112,20 @@ tasks. Errors are left out of every number and counted on their own.
 Each failed attempt is given one reason: the agent ran out of steps or time (or its reply hit the
 model's output cap), or else the grader's category. The report also shows the mean steps and
 minutes per attempt, and the tokens each task used.
+
+## Submitting a result
+
+A result is one agent's attempts at every task, kept in the repository so anyone can check it.
+
+1. Run every task, at least 5 attempts each, with the image built from this commit:
+   `distsys-eval build-image`, then `distsys-eval run ... --attempts 5`. Run it again until it
+   reports no errors: it only reruns attempts that errored.
+2. Check `distsys-eval report results/<agent>` looks right, then redraw the chart with every
+   agent in `results/`: `distsys-eval report results/* --chart results/pass-k.svg`.
+3. Open a pull request with `results/<agent>/` (its `results.jsonl`, transcripts and code) and the
+   chart. Say in it the exact `run` command, the model and its settings, and the harness commit
+   it ran on. Results from different harness commits aren't comparable if a task changed between
+   them.
 
 ## Trusting the grader
 

@@ -12,6 +12,8 @@
     distsys-eval run --command CMD --name NAME --image IMG --network --env API_KEY
                                   the same for a command-line agent installed in IMG
     distsys-eval report DIR       pass^k per task, why attempts failed, and what they cost
+    distsys-eval report DIR... --chart pass-k.svg
+                                  the same, and a chart of overall pass^k for each agent
 """
 
 from __future__ import annotations
@@ -27,6 +29,7 @@ from distsys_eval import __version__, runner
 from distsys_eval import calibrate as calibration
 from distsys_eval import report as reporting
 from distsys_eval.agent import Agent
+from distsys_eval.chart import pass_k_chart
 from distsys_eval.command import CommandAgent
 from distsys_eval.grader import describe, grade_directory
 from distsys_eval.results import RESULTS_FILE, line, load, totals
@@ -96,6 +99,7 @@ def build_parser() -> argparse.ArgumentParser:
     report = commands.add_parser("report", help="summarize the results of one or more runs")
     report.add_argument("dirs", nargs="+", type=Path, help="results directories, one per agent")
     report.add_argument("--json", action="store_true", help="print JSON instead of tables")
+    report.add_argument("--chart", type=Path, metavar="SVG", help="also draw each agent's pass^k here")
     report.set_defaults(run=report_command)
     return parser
 
@@ -209,6 +213,12 @@ def report_command(args: argparse.Namespace) -> int:
             print(f"no results in {directory}", file=sys.stderr)
             return 2
         reports.append(reporting.summarize(results, variant_of))
+    if args.chart:
+        try:
+            args.chart.write_text(pass_k_chart(reports))
+        except ValueError as e:  # more agents than one chart can show apart
+            print(e, file=sys.stderr)
+            return 2
     if args.json:
         print(json.dumps([reporting.as_json(r) for r in reports], indent=2))
     else:
