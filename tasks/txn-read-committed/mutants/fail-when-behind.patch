@@ -1,4 +1,4 @@
-Answers a transaction with an error when more than 100 records are waiting to reach the other
+Answers a transaction with an error when more than 10 records are waiting to reach the other
 node, as if it had been refused. It has already committed, so its writes are seen anyway.
 
 diff --git a/txn.go b/txn.go
@@ -15,7 +15,7 @@ index e67b521..764bae9 100644
 +		behind += len(records)
 +	}
 +	pendingLock.Unlock()
-+	if behind > 100 {
++	if behind > 10 {
 +		return node.Reply(msg, map[string]any{"type": "error", "code": 11, "text": "replicas are behind"})
 +	}
 +
