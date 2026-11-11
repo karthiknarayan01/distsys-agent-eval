@@ -17,10 +17,15 @@ The verdict:
   (it also exits with 0, 1 or 2). Unknown means a checker couldn't decide, e.g. gnuplot missing.
 - crashed: there is no verdict. Maelstrom stopped before writing one (a bad flag, a node that
   won't start) or ran past its timeout. `output` has the end of what it printed.
+
+A task may give its protocol names of its own (Rename). Maelstrom then starts maelstrom-rename
+as every node, which starts the real binary and renames messages between clients and nodes on
+the way through (docker/rename/main.go).
 """
 
 from __future__ import annotations
 
+import json
 import shlex
 from dataclasses import dataclass, field
 from typing import Any, Literal, Protocol
@@ -39,6 +44,7 @@ FLAGS = frozenset({
 # Beyond the time limit: starting the JVM and the nodes, then the analysis. Checking a long history
 # full of errors is the slow part: a Kafka run at 1000 requests a second takes about 3 minutes.
 STARTUP_SECONDS = 600
+RENAMER = "/usr/local/bin/maelstrom-rename"  # built into the sandbox image
 OUTPUT_TAIL_CHARS = 4000
 
 
@@ -51,9 +57,21 @@ class Shell(Protocol):
 
 
 @dataclass(frozen=True)
+class Rename:
+    """The task's own names for Maelstrom's: message types, and fields of a message's body."""
+
+    types: dict[str, str] = field(default_factory=dict)  # Maelstrom's name -> the task's
+    fields: dict[str, str] = field(default_factory=dict)
+
+    def as_json(self) -> str:
+        return json.dumps({"types": self.types, "fields": self.fields}, sort_keys=True)
+
+
+@dataclass(frozen=True)
 class MaelstromOptions:
     workload: str
     flags: dict[str, str | int | float | bool] = field(default_factory=dict)
+    rename: Rename | None = None
 
     def __post_init__(self) -> None:
         unknown = sorted(set(self.flags) - FLAGS)
@@ -106,14 +124,22 @@ async def run_maelstrom(
 
 
 def maelstrom_command(binary: str, options: MaelstromOptions) -> str:
-    """The `maelstrom test` command line, every value shell-quoted."""
+    """The `maelstrom test` command line, every value shell-quoted. With a rename, Maelstrom runs
+    maelstrom-rename, told the real binary (which must be an absolute path, since Maelstrom starts
+    nodes in a directory of its own) and the names through the environment."""
+    environment = ""
+    if options.rename:
+        # The shell takes NAME=value as an assignment only if the name itself isn't quoted.
+        variables = {"MAELSTROM_RENAME_BIN": binary, "MAELSTROM_RENAME": options.rename.as_json()}
+        environment = "".join(f"{name}={shlex.quote(value)} " for name, value in variables.items())
+        binary = RENAMER
     parts = ["maelstrom", "test", "--workload", options.workload, "--bin", binary]
     for flag, value in sorted(options.flags.items()):
         if value is True:
             parts.append(f"--{flag}")
         elif value is not False:
             parts += [f"--{flag}", str(value)]
-    return shlex.join(parts)
+    return environment + shlex.join(parts)
 
 
 def verdict_of(valid: Any) -> Verdict:

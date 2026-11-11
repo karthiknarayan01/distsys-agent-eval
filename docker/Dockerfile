@@ -26,6 +26,11 @@ RUN mkdir /tmp/warm && cd /tmp/warm \
  && rm -rf /tmp/warm \
  && chmod -R a+rX /go
 
+# maelstrom-rename, which grading puts between Maelstrom and a node when a task renames its
+# protocol. It uses only the standard library.
+COPY rename /tmp/rename
+RUN cd /tmp/rename && go build -o /usr/local/bin/maelstrom-rename . && rm -rf /tmp/rename
+
 # At run time: only the cache, no proxy, no checksum database.
 ENV GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod GOTOOLCHAIN=local
 

@@ -14,8 +14,12 @@ Status: under construction.
 
 Each task is a directory in `tasks/`: a `task.toml` with the Maelstrom workload and flags, how many
 runs in a row an attempt must pass, and the agent's time and step limits, and a `prompt.md` with
-the problem. A task can also set targets for how many messages the nodes may send per operation
-and how long a value may take to spread. `tasks/workspace.md` describes the container and is the same for every task.
+the problem. `tasks/workspace.md` describes the container and is the same for every task.
+
+A task can also set targets for how many messages the nodes may send per operation and how long
+a value may take to spread. And it can rename Maelstrom's message types and fields, so its
+protocol isn't one an agent may have memorized: grading then puts `maelstrom-rename`
+(`docker/rename/`) between Maelstrom and the program to translate.
 
 ```sh
 distsys-eval tasks          # list them

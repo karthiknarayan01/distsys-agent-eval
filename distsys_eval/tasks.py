@@ -29,6 +29,17 @@ Each task is a directory under tasks/ whose name is its id:
     node-count = 1
     time-limit = 10
 
+A task can give Maelstrom's message types and body fields names of its own, so its protocol
+isn't the one an agent may remember. Its prompt uses the new names, and maelstrom-rename
+translates between the two while the task is graded:
+
+    [rename.types]
+    echo = "say"
+    echo_ok = "said"
+
+    [rename.fields]
+    echo = "words"
+
 A task that grades efficiency too adds the limits a valid run must stay within (targets.py):
 
     [targets]
@@ -47,7 +58,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from distsys_eval.maelstrom import MaelstromOptions, maelstrom_command
+from distsys_eval.maelstrom import MaelstromOptions, Rename, maelstrom_command
 from distsys_eval.targets import KEYS as TARGET_KEYS
 from distsys_eval.targets import Targets
 
@@ -57,8 +68,9 @@ TASKS_DIR = Path(__file__).resolve().parent.parent / "tasks"
 # directory, the grader builds it with BUILD and Maelstrom runs BINARY as every node.
 BUILD = "go build -o node ."
 BINARY = "./node"
+WORKSPACE_BINARY = "/work/node"  # the same, as maelstrom-rename needs it: an absolute path
 
-TASK_KEYS = {"title", "runs", "agent", "maelstrom", "targets"}
+TASK_KEYS = {"title", "runs", "agent", "maelstrom", "targets", "rename"}
 AGENT_KEYS = {"minutes", "steps"}
 
 
@@ -103,7 +115,7 @@ def load_task(path: Path) -> Task:
     if runs < 1:
         raise TaskError(f"{task_id}: runs must be at least 1, not {runs}")
     limits = agent_limits(task_id, _get(task_id, config, "agent", dict))
-    maelstrom = maelstrom_options(task_id, _get(task_id, config, "maelstrom", dict))
+    maelstrom = maelstrom_options(task_id, _get(task_id, config, "maelstrom", dict), config.get("rename"))
     limits_on_runs = targets(task_id, config.get("targets", {}))
     prompt = _read(path / "prompt.md").strip()
     if not prompt:
@@ -123,16 +135,39 @@ def agent_limits(task_id: str, table: dict[str, Any]) -> AgentLimits:
     return AgentLimits(float(minutes), steps)
 
 
-def maelstrom_options(task_id: str, table: dict[str, Any]) -> MaelstromOptions:
-    """The [maelstrom] table: the workload, and the rest as `maelstrom test` flags."""
+def maelstrom_options(task_id: str, table: dict[str, Any], rename_table: Any) -> MaelstromOptions:
+    """The [maelstrom] table: the workload, and the rest as `maelstrom test` flags; and the
+    [rename] table, if there is one."""
     flags = dict(table)
     workload = flags.pop("workload", None)
     if not isinstance(workload, str):
         raise TaskError(f"{task_id}: [maelstrom] needs a workload")
+    names = None if rename_table is None else rename(task_id, rename_table)
     try:
-        return MaelstromOptions(workload, flags)
+        return MaelstromOptions(workload, flags, names)
     except ValueError as e:
         raise TaskError(f"{task_id}: [maelstrom] {e}") from e
+
+
+def rename(task_id: str, table: Any) -> Rename:
+    """The [rename] table: [rename.types] and [rename.fields], each mapping Maelstrom's names to
+    the task's. Each must be one to one, so a reply can be renamed back."""
+    if not isinstance(table, dict):
+        raise TaskError(f"{task_id}: rename must be a table")
+    _only(task_id, "[rename]", table, {"types", "fields"})
+    maps = {}
+    for part in ("types", "fields"):
+        names = table.get(part, {})
+        if not isinstance(names, dict) or not all(
+            isinstance(v, str) and v for v in names.values()
+        ):
+            raise TaskError(f"{task_id}: [rename.{part}] must map names to names")
+        if len(set(names.values())) != len(names):
+            raise TaskError(f"{task_id}: [rename.{part}] renames two names to the same one")
+        maps[part] = dict(names)
+    if not maps["types"] and not maps["fields"]:
+        raise TaskError(f"{task_id}: [rename] renames nothing")
+    return Rename(maps["types"], maps["fields"])
 
 
 def targets(task_id: str, table: Any) -> Targets:
@@ -166,10 +201,16 @@ def brief(
         f"You have {limits.minutes:g} minutes and {limits.steps} steps, a step being one reply from you, "
         "however many tools it runs. If either runs out, you are stopped where you are.\n\n"
         f"When you stop, your program is built with `{BUILD}` and tested {times} with:\n\n"
-        f"    {maelstrom_command(BINARY, maelstrom)}\n\n"
+        f"    {maelstrom_command(WORKSPACE_BINARY if maelstrom.rename else BINARY, maelstrom)}\n\n"
         "The runs are independent, each with its own timing and faults. The attempt passes only if it "
         "builds and every run is valid."
     )
+    if maelstrom.rename:
+        grading += (
+            "\n\nMaelstrom itself uses other names for these messages. `maelstrom-rename` stands in "
+            "for your program, starts it, and translates every message between a client and a node, "
+            "so test with the command above as it is."
+        )
     if targets:
         grading += "\n\n" + targets_section(targets)
     return f"{workspace}\n\n{prompt}\n\n{grading}\n"

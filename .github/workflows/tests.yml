@@ -28,6 +28,19 @@ jobs:
       - name: Run tests
         run: python -m pytest -q
 
+  rename:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: docker/rename
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: docker/rename/go.mod
+      - name: Test maelstrom-rename
+        run: go vet ./... && go test ./...
+
   sandbox:
     runs-on: ubuntu-latest
     steps:
