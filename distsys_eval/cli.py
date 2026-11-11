@@ -6,6 +6,7 @@
     distsys-eval tasks echo       show what the agent is told for one task
     distsys-eval grade echo DIR   grade a Go program in DIR as an attempt at a task
     distsys-eval validate         check that references pass and mutants fail
+    distsys-eval calibrate        measure how often one run catches each mutant, and choose m
 """
 
 from __future__ import annotations
@@ -17,6 +18,7 @@ import sys
 from pathlib import Path
 
 from distsys_eval import __version__
+from distsys_eval import calibrate as calibration
 from distsys_eval.grader import describe, grade_directory
 from distsys_eval.sandbox import DOCKERFILE_DIR, IMAGE
 from distsys_eval.tasks import TASKS_DIR, load_tasks
@@ -56,6 +58,13 @@ def build_parser() -> argparse.ArgumentParser:
     check.add_argument("--jobs", type=int, default=1, help="sandboxes to run at once (default 1)")
     check.add_argument("--image", default=IMAGE, help=f"sandbox image (default {IMAGE})")
     check.set_defaults(run=validate_command)
+    calibrate = commands.add_parser("calibrate", help="measure each mutant's catch rate per run and choose m")
+    calibrate.add_argument("tasks", nargs="*", help="task ids (default: every task)")
+    calibrate.add_argument("--trials", type=int, default=20, help="runs per subject (default 20)")
+    calibrate.add_argument("--jobs", type=int, default=1, help="sandboxes to run at once (default 1)")
+    calibrate.add_argument("--image", default=IMAGE, help=f"sandbox image (default {IMAGE})")
+    calibrate.add_argument("--write", action="store_true", help="record the counts and set m")
+    calibrate.set_defaults(run=calibrate_command)
     return parser
 
 
@@ -96,12 +105,36 @@ def grade_command(args: argparse.Namespace) -> int:
 def validate_command(args: argparse.Namespace) -> int:
     """Grade every reference and mutant and print how each came out; exits 0 only if all were
     graded as expected."""
-    tasks = {task.id: task for task in load_tasks(TASKS_DIR)}
-    unknown = [task_id for task_id in args.tasks if task_id not in tasks]
-    if unknown:
-        print(f"no task {', '.join(map(repr, unknown))}; the tasks are: {', '.join(tasks)}", file=sys.stderr)
+    chosen = pick_tasks(args.tasks)
+    if chosen is None:
         return 2
-    chosen = [tasks[task_id] for task_id in args.tasks] or list(tasks.values())
     checks = asyncio.run(validate(chosen, args.image, args.jobs))
     print(summary(checks))
     return 0 if all(check.ok for check in checks) else 1
+
+
+def calibrate_command(args: argparse.Namespace) -> int:
+    """Measure every reference and mutant, print the counts and the m they call for, and with
+    --write record them. Exits 1 if some task has no m: a mutant caught too rarely, or a flaky
+    reference."""
+    chosen = pick_tasks(args.tasks)
+    if chosen is None:
+        return 2
+    results = asyncio.run(calibration.calibrate(chosen, args.trials, args.image, args.jobs))
+    print(calibration.summary(results))
+    usable = [r for r in results if r.runs and r.reference.built and not r.reference.failed]
+    if args.write:
+        for result in usable:
+            calibration.write(result)
+    return 0 if len(usable) == len(results) else 1
+
+
+def pick_tasks(task_ids: list[str]) -> list | None:
+    """The named tasks, or every task when none is named; None (after saying so) if a name is
+    not a task."""
+    tasks = {task.id: task for task in load_tasks(TASKS_DIR)}
+    unknown = [task_id for task_id in task_ids if task_id not in tasks]
+    if unknown:
+        print(f"no task {', '.join(map(repr, unknown))}; the tasks are: {', '.join(tasks)}", file=sys.stderr)
+        return None
+    return [tasks[task_id] for task_id in task_ids] or list(tasks.values())

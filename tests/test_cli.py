@@ -89,3 +89,21 @@ def test_validate_exits_1_when_a_check_comes_out_wrong(monkeypatch, capsys):
 def test_validate_refuses_an_unknown_task(capsys):
     assert main(["validate", "nope"]) == 2
     assert "no task 'nope'" in capsys.readouterr().err
+
+
+def test_calibrate_writes_only_with_write_and_exits_1_when_a_task_has_no_m(monkeypatch, capsys):
+    from tests.test_calibrate import calibration
+
+    written = []
+
+    async def fake_calibrate(tasks, trials, image, jobs):
+        assert trials == 7
+        return [calibration(caught=(20, 20)), calibration(caught=(0, 20))]
+
+    monkeypatch.setattr("distsys_eval.calibrate.calibrate", fake_calibrate)
+    monkeypatch.setattr("distsys_eval.calibrate.write", written.append)
+    assert main(["calibrate", "echo", "--trials", "7"]) == 1
+    assert written == []
+    assert main(["calibrate", "echo", "--trials", "7", "--write"]) == 1
+    assert len(written) == 1 and written[0].runs == 3
+    assert "no m is enough" in capsys.readouterr().out

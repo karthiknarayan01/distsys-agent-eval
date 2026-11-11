@@ -15,8 +15,9 @@ BUILT = ExecResult(0, "", False, False)
 
 
 class GradingShell:
-    """Answers `go build` with `build`, and each Maelstrom run with the next of `verdicts`:
-    a recorded results file ("valid", "invalid", "unknown"), or None for a run that writes none."""
+    """Answers `go build` with `build`, each Maelstrom run with the next of `verdicts`, and
+    anything else with success. A verdict is a recorded results file ("valid", "invalid",
+    "unknown"), or None for a run that writes none."""
 
     def __init__(self, verdicts: list[str | None], build: ExecResult = BUILT):
         self.build = build
@@ -28,6 +29,8 @@ class GradingShell:
         self.commands.append(command)
         if command.startswith("go build"):
             return self.build
+        if "maelstrom test" not in command:
+            return BUILT  # housekeeping, such as removing a run's directory
         run_dir = re.match(r"mkdir -p (\S+) ", command).group(1)
         verdict = self.verdicts.pop(0)
         if verdict:

@@ -66,8 +66,7 @@ async def grade_directory(task: Task, source: Path, image: str | None = None) ->
 
 async def grade_attempt(shell: Shell, task: Task, grade_dir: str = GRADE_DIR) -> Grade:
     """Build the program in the shell's working directory and run the task's m Maelstrom runs."""
-    binary = f"{grade_dir}/node"
-    build = await shell.exec(f"go build -o {shlex.quote(binary)} .", timeout=BUILD_SECONDS)
+    build, binary = await build_attempt(shell, grade_dir)
     if not build.ok:
         return Grade("fail", "doesnt-build", build, [])
     runs = []
@@ -83,6 +82,13 @@ async def grade_attempt(shell: Shell, task: Task, grade_dir: str = GRADE_DIR) ->
     if last.verdict == "crashed":
         return Grade("fail", "crashed", build, runs)
     return await diagnose(shell, binary, task, grade_dir, Grade("fail", "fails-without-faults", build, runs))
+
+
+async def build_attempt(shell: Shell, grade_dir: str = GRADE_DIR) -> tuple[ExecResult, str]:
+    """`go build` the working directory into grade_dir; the result, and where the binary went."""
+    binary = f"{grade_dir}/node"
+    build = await shell.exec(f"go build -o {shlex.quote(binary)} .", timeout=BUILD_SECONDS)
+    return build, binary
 
 
 async def diagnose(shell: Shell, binary: str, task: Task, grade_dir: str, failed: Grade) -> Grade:
