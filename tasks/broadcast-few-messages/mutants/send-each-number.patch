@@ -1,0 +1,17 @@
+Also sends every new value to each neighbor on its own as soon as it arrives, besides batching it
+for the sweep. Each value then costs its own frames and acks.
+
+diff --git a/gossip.go b/gossip.go
+index 9bf0b77..0f33c6d 100644
+--- a/gossip.go
++++ b/gossip.go
+@@ -50,6 +50,9 @@ func handleBroadcast(msg maelstrom.Message) error {
+ 	// keeps the per-number frame and ack cost down.
+ 	for neighbor, nums := range sendPlan {
+ 		markSent(neighbor, nums)
++		for _, m := range nums {
++			sendFrame(neighbor, []int{m})
++		}
+ 	}
+ 
+ 	return node.Reply(msg, map[string]any{"type": "broadcast_ok"})

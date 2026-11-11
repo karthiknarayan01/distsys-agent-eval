@@ -5,14 +5,16 @@
     grade.category    why it failed, e.g. "fails-under-faults"; None unless it failed
     grade.runs        the Maelstrom runs, in order
 
-The attempt passes only if it builds and every one of the task's m runs is valid. Grading stops
-at the first run that isn't, since the attempt can't pass after that.
+The attempt passes only if it builds and every one of the task's m runs is valid and meets the
+task's targets, if it has any. Grading stops at the first run that doesn't, since the attempt
+can't pass after that.
 
 A failed attempt gets one category:
 - doesnt-build: `go build` failed or took too long.
 - crashed: a run ended with no verdict, e.g. the node exits at startup.
 - fails-without-faults: wrong even on a calm network.
 - fails-under-faults: right on a calm network, wrong once faults are injected.
+- too-slow: valid, but over the task's message or latency targets. `grade.missed` says which.
 
 The last two are told apart by one extra run with the task's faults switched off, made only when
 a run with faults failed. One calm run can be lucky, so fails-under-faults means "the calm run
@@ -25,16 +27,17 @@ it isn't counted against the agent. Docker failing raises SandboxError, as every
 from __future__ import annotations
 
 import shlex
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Literal
 
 from distsys_eval.maelstrom import MaelstromOptions, MaelstromResult, Shell, run_maelstrom
 from distsys_eval.sandbox import ExecResult, Sandbox, SandboxConfig
+from distsys_eval.targets import missed
 from distsys_eval.tasks import Task
 
 Outcome = Literal["pass", "fail", "error"]
-Category = Literal["doesnt-build", "crashed", "fails-without-faults", "fails-under-faults"]
+Category = Literal["doesnt-build", "crashed", "fails-without-faults", "fails-under-faults", "too-slow"]
 
 # Outside the agent's working directory, so nothing the agent left there can stand in for the
 # grader's own binary or Maelstrom's results.
@@ -51,6 +54,7 @@ class Grade:
     build: ExecResult
     runs: list[MaelstromResult]  # up to the first that wasn't valid
     calm_run: MaelstromResult | None = None  # the run without faults, made only to diagnose a failure
+    missed: list[str] = field(default_factory=list)  # the targets the last run missed, if too-slow
 
     @property
     def passed(self) -> bool:
@@ -74,6 +78,9 @@ async def grade_attempt(shell: Shell, task: Task, grade_dir: str = GRADE_DIR) ->
         runs.append(await run_maelstrom(shell, binary, task.maelstrom, f"{grade_dir}/run-{number}"))
         if not runs[-1].valid:
             break
+        misses = missed(task.targets, runs[-1].results)
+        if misses:
+            return Grade("fail", "too-slow", build, runs, missed=misses)
     last = runs[-1]
     if last.valid:
         return Grade("pass", None, build, runs)
@@ -121,6 +128,8 @@ def describe(task: Task, grade: Grade) -> str:
         lines += ["  " + line for line in grade.build.output.strip().splitlines()[-BUILD_OUTPUT_LINES:]]
     for number, run in enumerate(grade.runs, 1):
         lines.append(f"  run {number}: {run_line(run)}")
+    if grade.missed:
+        lines.append(f"  too slow: {'; '.join(grade.missed)}")
     if grade.calm_run:
         lines.append(f"  without faults: {run_line(grade.calm_run)}")
     return "\n".join(lines)

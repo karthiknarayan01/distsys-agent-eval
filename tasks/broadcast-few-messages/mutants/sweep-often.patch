@@ -1,0 +1,16 @@
+Sends what neighbors are missing every 30 ms. That is fast and fine on a looser message budget,
+but frames carry too few values each to stay within this one.
+
+diff --git a/sweep.go b/sweep.go
+index ac65e0f..6e49ca5 100644
+--- a/sweep.go
++++ b/sweep.go
+@@ -13,7 +13,7 @@ import (
+ )
+ 
+ // sweepPause is how often we re-send numbers waiting for a peer ack.
+-const sweepPause = 120 * time.Millisecond
++const sweepPause = 30 * time.Millisecond
+ 
+ // awaitingAck maps a neighbor id to the numbers we sent it but it has
+ // not acked yet. The sweep keeps re-sending these until the ack comes.

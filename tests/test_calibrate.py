@@ -18,6 +18,7 @@ from distsys_eval.calibrate import (
     write,
 )
 from distsys_eval.sandbox import ExecResult
+from distsys_eval.targets import Targets
 from distsys_eval.tasks import TASKS_DIR, load_task
 from distsys_eval.validate import Subject
 from tests.test_grader import GradingShell
@@ -58,6 +59,12 @@ async def test_measure_counts_every_run_and_leaves_out_undecided_ones():
     runs = [c for c in shell.commands if "maelstrom test" in c]
     assert len(runs) == 5 and all("--bin /tmp/grade/node" in c for c in runs)
     assert "rm -rf /tmp/grade/trial-5" in shell.commands
+
+
+async def test_a_valid_run_over_the_targets_counts_as_a_catch():
+    slow = replace(MUTANT, task=replace(ECHO, targets=Targets(median_latency_ms=400)))
+    measured = await measure(GradingShell(["valid", "invalid"]), slow, trials=2)
+    assert (measured.failed, measured.decided) == (2, 2)
 
 
 async def test_a_subject_that_doesnt_build_runs_nothing():

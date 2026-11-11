@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from distsys_eval.sandbox import DOCKERFILE_DIR
+from distsys_eval.targets import Targets
 from distsys_eval.tasks import TASKS_DIR, TaskError, load_task, load_tasks
 
 GOOD_TOML = """\
@@ -30,8 +31,8 @@ time-limit = 10
 def test_shipped_tasks_load():
     tasks = load_tasks()
     assert [task.id for task in tasks] == [
-        "broadcast-fault-tolerant", "broadcast-multi-node", "broadcast-single-node", "echo", "g-counter",
-        "unique-ids",
+        "broadcast-fault-tolerant", "broadcast-few-messages", "broadcast-low-latency", "broadcast-multi-node",
+        "broadcast-single-node", "echo", "g-counter", "unique-ids",
     ]
     assert all(task.runs >= 1 and task.prompt and task.title for task in tasks)
 
@@ -53,6 +54,20 @@ def test_brief_shows_the_limits_and_the_exact_grading_command():
         "maelstrom test --workload unique-ids --bin ./node --availability total --concurrency 2n "
         "--nemesis partition --node-count 3 --rate 1000 --time-limit 30"
     ) in task.brief
+
+
+def test_an_efficiency_task_tells_the_agent_its_targets():
+    task = load_task(TASKS_DIR / "broadcast-low-latency")
+    assert task.targets == Targets(msgs_per_op=30, median_latency_ms=400, max_latency_ms=600)
+    assert "A valid run must also meet these targets" in task.brief
+    assert "At most 30 messages between nodes per client operation" in task.brief
+    assert "A median latency of at most 400 ms" in task.brief
+    assert "A maximum latency of at most 600 ms" in task.brief
+
+
+def test_a_task_without_targets_says_nothing_about_them():
+    task = load_task(TASKS_DIR / "echo")
+    assert not task.targets and "targets" not in task.brief
 
 
 def test_workspace_names_the_library_version_the_image_has():
@@ -82,6 +97,13 @@ def test_a_good_task_loads(tmp_path):
     assert (task.limits.minutes, task.limits.steps) == (15.0, 50)
     assert task.maelstrom.flags == {"node-count": 1, "time-limit": 10}
     assert "tested 2 times" in task.brief
+    assert task.targets == Targets()
+
+
+def test_targets_load_as_numbers(tmp_path):
+    toml = GOOD_TOML + "\n[targets]\nmsgs-per-op = 20\nmax-latency-ms = 2000.5\n"
+    task = load_task(make_task(tmp_path, toml))
+    assert task.targets == Targets(msgs_per_op=20.0, max_latency_ms=2000.5)
 
 
 @pytest.mark.parametrize(
@@ -97,6 +119,10 @@ def test_a_good_task_loads(tmp_path):
         (('workload = "echo"\n', ""), "[maelstrom] needs a workload"),
         (("node-count = 1", "nodes = 1"), "not Maelstrom test flags: nodes"),
         (("runs = 2", "runs = = 2"), "task.toml:"),
+        (("runs = 2", "runs = 2\ntargets = 3"), "targets must be a table"),
+        (("[agent]", "[targets]\nlatency = 1\n\n[agent]"), "[targets] has unknown keys: latency"),
+        (("[agent]", "[targets]\nmsgs-per-op = 0\n\n[agent]"), "[targets] msgs-per-op must be positive"),
+        (("[agent]", '[targets]\nmsgs-per-op = "9"\n\n[agent]'), "msgs-per-op is missing or has the wrong"),
     ],
 )
 def test_a_bad_task_toml_is_refused(tmp_path, change, message):

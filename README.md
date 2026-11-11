@@ -14,7 +14,8 @@ Status: under construction.
 
 Each task is a directory in `tasks/`: a `task.toml` with the Maelstrom workload and flags, how many
 runs in a row an attempt must pass, and the agent's time and step limits, and a `prompt.md` with
-the problem. `tasks/workspace.md` describes the container and is the same for every task.
+the problem. A task can also set targets for how many messages the nodes may send per operation
+and how long a value may take to spread. `tasks/workspace.md` describes the container and is the same for every task.
 
 ```sh
 distsys-eval tasks          # list them
@@ -37,9 +38,10 @@ so the container itself never needs a network.
 
 An attempt is graded by building it with `go build` and running Maelstrom the task's m times,
 stopping at the first run that isn't valid. It passes only if every run is valid. A failure gets
-one category: `doesnt-build`, `crashed`, `fails-without-faults`, or `fails-under-faults` (valid
-again once the task's faults are switched off). A run Maelstrom couldn't decide is an `error`
-and isn't counted against the agent.
+one category: `doesnt-build`, `crashed`, `fails-without-faults`, `fails-under-faults` (valid
+again once the task's faults are switched off), or `too-slow` (valid, but over the task's
+message or latency targets). A run Maelstrom couldn't decide is an `error` and isn't counted
+against the agent.
 
 ```sh
 distsys-eval grade echo path/to/solution    # grade a directory in a fresh sandbox
