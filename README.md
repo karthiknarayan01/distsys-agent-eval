@@ -90,8 +90,9 @@ minutes per attempt, and the tokens each task used.
 
 Every task carries code whose grade is known: `reference/`, a correct solution that must pass,
 and `mutants/*.patch`, copies of it with one realistic bug each, which must fail (and not just
-fail to build). `validate` grades them all and says which came out wrong. CI runs it on every
-change, so a change to a task can't quietly weaken its grading.
+fail to build). `validate` grades them all and says which came out wrong. It takes a while, so
+it isn't part of CI: run it after changing a task or the grader, locally or from the `validate`
+workflow.
 
 ```sh
 distsys-eval validate --jobs 3          # every task
