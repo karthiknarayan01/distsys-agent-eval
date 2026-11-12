@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     # Shellmate, the built-in agent, pinned so an attempt always runs a known agent loop
-    "agent-runtime @ git+https://github.com/karthiknarayan01/Shellmate@98d434a53643dddb804501ad8cdb477620c92504",
+    "agent-runtime @ git+https://github.com/karthiknarayan01/Shellmate@5236a606658d3c8ce4ad41692826b12a03a8f2ff",
 ]
 
 [project.optional-dependencies]

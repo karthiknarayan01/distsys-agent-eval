@@ -25,6 +25,14 @@ def test_each_model_is_run_with_its_provider_then_everything_is_reported():
     ]
 
 
+def test_frontier_models_run_their_providers_default_model_or_the_one_named():
+    assert dry_run("--models", "anthropic,openai,openai/gpt-6-astra", "--tasks", "echo")[:3] == [
+        "distsys-eval run --attempts 5 --jobs 1 --provider anthropic echo",
+        "distsys-eval run --attempts 5 --jobs 1 --provider openai echo",
+        "distsys-eval run --attempts 5 --jobs 1 --provider openai --model gpt-6-astra echo",
+    ]
+
+
 def test_without_a_terminal_it_asks_nothing_and_takes_the_defaults():
     (run, _report) = dry_run()
     assert run.startswith("distsys-eval run --attempts 5 --jobs 1 --provider ollama --model qwen3.5:")

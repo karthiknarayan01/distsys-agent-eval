@@ -113,10 +113,11 @@ def test_calibrate_writes_only_with_write_and_exits_1_when_a_task_has_no_m(monke
     assert "no m is enough" in capsys.readouterr().out
 
 
-def test_run_says_so_when_the_provider_cant_be_used(monkeypatch, capsys):
-    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
-    assert main(["run", "--provider", "deepseek"]) == 2
-    assert "DEEPSEEK_API_KEY is not set" in capsys.readouterr().err
+@pytest.mark.parametrize("provider, key", [("deepseek", "DEEPSEEK_API_KEY"), ("openai", "OPENAI_API_KEY")])
+def test_run_says_so_when_the_provider_cant_be_used(monkeypatch, capsys, provider, key):
+    monkeypatch.delenv(key, raising=False)
+    assert main(["run", "--provider", provider]) == 2
+    assert f"{key} is not set" in capsys.readouterr().err
 
 
 def test_run_prints_each_attempt_then_the_totals(monkeypatch, capsys):
