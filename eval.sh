@@ -4,11 +4,13 @@
 #   ./eval.sh                                  asks which models, how many attempts, which tasks
 #   ./eval.sh --models qwen3.5:9b --yes        no questions: these models, the defaults for the rest
 #   ./eval.sh --models qwen3.5:4b,qwen3.5:9b --attempts 3 --tasks "echo unique-ids"
-#   ./eval.sh --models deepseek                a hosted model (needs DEEPSEEK_API_KEY; paid)
+#   ./eval.sh --models anthropic,openai        frontier models (need their API keys; paid)
+#   ./eval.sh --models openai/gpt-6-astra      a hosted provider's model other than its default
 #   ./eval.sh --dry-run ...                    print what it would run, and set nothing up
 #
-# A model is an Ollama model name (run on this computer), or deepseek or anthropic (hosted, with
-# their API keys from the environment or .env). Defaults: the Qwen that fits this computer's
+# A model is an Ollama model name (run on this computer), or a hosted provider: anthropic (Claude),
+# openai or deepseek, with its API key from the environment or .env. A provider runs its default
+# model; provider/model picks another. Defaults: the Qwen that fits this computer's
 # memory, 5 attempts per task, 1 attempt at a time, every task.
 #
 # Before running, it:
@@ -85,21 +87,23 @@ choose_models() {
     # A numbered menu on stderr; prints the chosen models, comma-separated, on stdout.
     local recommended options answer choice chosen=""
     recommended="$(qwen_for_this_machine)"
-    options="qwen3.5:4b qwen3.5:9b qwen3.5:27b deepseek"
+    options="qwen3.5:4b qwen3.5:9b qwen3.5:27b anthropic openai deepseek"
     {
-        echo "Which models should the agent run on? (several are fine, e.g. 1,2)"
+        echo "Which models should the agent run on? (several are fine, e.g. 1,4)"
         echo "  1) qwen3.5:4b    open, on this computer"
         echo "  2) qwen3.5:9b    open, on this computer (needs about 12 GB of memory)"
         echo "  3) qwen3.5:27b   open, on this computer (needs about 32 GB of memory)"
-        echo "  4) deepseek      hosted, needs DEEPSEEK_API_KEY, and is paid for per token"
-        echo "  5) another Ollama model, by name"
+        echo "  4) Claude        Anthropic's default model; needs ANTHROPIC_API_KEY, paid per token"
+        echo "  5) OpenAI        OpenAI's default model; needs OPENAI_API_KEY, paid per token"
+        echo "  6) DeepSeek      DeepSeek's default model; needs DEEPSEEK_API_KEY, paid per token"
+        echo "  7) another model, by name: an Ollama model, or provider/model like openai/gpt-6-astra"
     } >&2
     read -r -p "Models [$recommended, which fits this computer]: " answer >&2 || answer=""
     [[ -n "$answer" ]] || { echo "$recommended"; return; }
     for choice in $(echo "$answer" | tr ',' ' '); do
         case "$choice" in
-            [1-4]) chosen="$chosen,$(echo "$options" | cut -d' ' -f"$choice")" ;;
-            5) read -r -p "Ollama model name: " answer >&2; chosen="$chosen,$answer" ;;
+            [1-6]) chosen="$chosen,$(echo "$options" | cut -d' ' -f"$choice")" ;;
+            7) read -r -p "Model: " answer >&2; chosen="$chosen,$answer" ;;
             *) chosen="$chosen,$choice" ;;  # a model name typed in directly
         esac
     done
@@ -121,15 +125,26 @@ prepare() {
     ensure_sandbox_image
     local model local_models=()
     for model in "$@"; do
-        case "$model" in
+        case "$(hosted_provider "$model")" in
             deepseek) ensure_key DEEPSEEK_API_KEY ;;
             anthropic) ensure_key ANTHROPIC_API_KEY ;;
+            openai) ensure_key OPENAI_API_KEY ;;
             *) local_models+=("$model") ;;
         esac
     done
     [[ ${#local_models[@]} -gt 0 ]] || return 0
     ensure_ollama_running
     for model in "${local_models[@]}"; do ensure_model_downloaded "$model"; done
+}
+
+hosted_provider() {
+    # $1 a model as eval.sh takes it. Prints its hosted provider (anthropic, openai, deepseek),
+    # or nothing for an Ollama model.
+    case "$1" in
+        anthropic | anthropic/*) echo anthropic ;;
+        openai | openai/*) echo openai ;;
+        deepseek | deepseek/*) echo deepseek ;;
+    esac
 }
 
 ensure_key() {
@@ -145,10 +160,14 @@ ensure_key() {
 run_model() {
     # $1 model, $2 attempts, $3 jobs, $4 tasks (space-separated, may be empty), $5 dry run.
     local command=(run --attempts "$2" --jobs "$3")
-    case "$1" in
-        deepseek | anthropic) command+=(--provider "$1") ;;
-        *) command+=(--provider ollama --model "$1") ;;
-    esac
+    local provider
+    provider="$(hosted_provider "$1")"
+    if [[ -z "$provider" ]]; then
+        command+=(--provider ollama --model "$1")
+    else
+        command+=(--provider "$provider")
+        [[ "$1" != */* ]] || command+=(--model "${1#*/}")
+    fi
     local task
     for task in $4; do command+=("$task"); done
     if [[ $5 -eq 1 ]]; then

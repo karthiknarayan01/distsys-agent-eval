@@ -67,7 +67,11 @@ The first run sets everything up, asks which models to test, then runs every tas
 |---|---|
 | **Qwen 3.5**, on your computer (4B, 9B or 27B) | Nothing. It's free, and Ollama runs it locally. |
 | **Any other Ollama model** | Its name. |
+| **Claude**, by Anthropic | `ANTHROPIC_API_KEY`. You pay per token. |
+| **OpenAI's GPT models** | `OPENAI_API_KEY`. You pay per token. |
 | **DeepSeek** | `DEEPSEEK_API_KEY`. You pay per token. |
+
+Each hosted provider runs its default model; name another as `provider/model`, such as `openai/gpt-6-astra`.
 
 A full run takes hours. Stop it whenever you like: running `./eval.sh` again carries on where it left off. Results go to `results/`: `report.txt` has the tables, and `pass-k.svg` is a chart of every agent's pass^k.
 

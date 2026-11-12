@@ -82,7 +82,7 @@ def build_parser() -> argparse.ArgumentParser:
     attempts = commands.add_parser("run", help="run an agent's attempts at the tasks and grade them")
     attempts.add_argument("tasks", nargs="*", help="task ids (default: every task)")
     which = attempts.add_mutually_exclusive_group(required=True)
-    which.add_argument("--provider", choices=["ollama", "deepseek", "anthropic"],
+    which.add_argument("--provider", choices=["ollama", "anthropic", "openai", "deepseek"],
                        help="run Shellmate with this model provider")
     which.add_argument("--command", dest="agent_command",
                        help="run this command-line agent in the sandbox; the brief is at $BRIEF")

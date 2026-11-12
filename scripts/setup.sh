@@ -7,7 +7,7 @@
 #   install_package               .venv with the package installed (again when pyproject.toml changes)
 #   ensure_docker_running         Docker's daemon answering, starting Docker Desktop on macOS if needed
 #   ensure_sandbox_image          the sandbox image built (again when docker/ changes)
-#   load_env_file                 export model API keys (DEEPSEEK_API_KEY, ANTHROPIC_API_KEY) from .env
+#   load_env_file                 export model API keys (ANTHROPIC_API_KEY, OPENAI_API_KEY, DEEPSEEK_API_KEY) from .env
 #   qwen_for_this_machine         the Qwen model that fits this computer's memory
 #   ensure_ollama_running         install Ollama (after asking) and start it if needed
 #   ensure_model_downloaded M     pull model M unless Ollama already has it
@@ -113,7 +113,7 @@ load_env_file() {
         value="${value%$'\r'}"
         value="${value#\"}"; value="${value%\"}"
         case "$key" in
-            DEEPSEEK_API_KEY | ANTHROPIC_API_KEY) [[ -n "${!key:-}" || -z "$value" ]] || export "$key=$value" ;;
+            DEEPSEEK_API_KEY | ANTHROPIC_API_KEY | OPENAI_API_KEY) [[ -n "${!key:-}" || -z "$value" ]] || export "$key=$value" ;;
         esac
     done < "$file"
 }
