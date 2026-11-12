@@ -1,178 +1,167 @@
+<div align="center">
+
 # distsys-agent-eval
 
-A benchmark of how well coding agents write fault-tolerant distributed systems code.
+**Can a coding agent write distributed systems code that keeps working when the network breaks?**<br>
+Agents get real distributed systems problems and write Go programs to solve them. [Jepsen's Maelstrom](https://github.com/jepsen-io/maelstrom)
+then runs each program as a cluster, cuts the network apart, and checks every answer. No model grades the work.
 
-An agent gets a task, such as a broadcast node that must reach the whole cluster while the network
-is partitioned, and writes a Go program in a fresh container. [Maelstrom](https://github.com/jepsen-io/maelstrom)
-runs that program as a cluster several times under injected faults, and the attempt passes only if
-every run is valid. No judge model is involved. Repeating attempts gives pass^k: how reliably an
-agent solves a task, not just whether it can.
+</div>
 
-Status: under construction.
+---
 
-## Tasks
+## What the agent is asked to build
 
-Each task is a directory in `tasks/`: a `task.toml` with the Maelstrom workload and flags, how many
-runs in a row an attempt must pass, and the agent's time and step limits, and a `prompt.md` with
-the problem. `tasks/workspace.md` describes the container and is the same for every task.
+15 tasks, from a warm-up to transactions that must stay available while the cluster is split in two.
 
-A task can also set targets for how many messages the nodes may send per operation and how long
-a value may take to spread. And it can rename Maelstrom's message types and fields, so its
-protocol isn't one an agent may have memorized: grading then puts `maelstrom-rename`
-(`docker/rename/`) between Maelstrom and the program to translate.
+| the agent builds… | across | while Maelstrom… |
+|---|---|---|
+| 🧩 **Echo** and **unique IDs** | 1–5 nodes | splits the network, and every ID request must still get an answer at once |
+| 📣 **Broadcast**: a value told to one node reaches all of them | 1–25 nodes | splits the network, or adds 100 ms per message and counts how many the nodes send and how long values take to spread |
+| ➕ **A grow-only counter** on a shared key/value store | 3–4 nodes | splits the network, and the final count must still be exact |
+| 📜 **A Kafka-style log** with offsets and commits | 1–3 nodes | sends 1,000 requests a second, from clients that may ask any node |
+| 🔐 **Read-committed transactions** | 2 nodes | splits the network, and no transaction may wait for the other node |
 
-The public challenges and their solutions are on GitHub, so an agent may pass a task from
-memory. Some tasks therefore have a variant (`tasks/*-variant/`): the same problem under new
-names and a different cluster size, say a box office issuing tickets instead of nodes generating
-IDs. A variant uses its original's reference and mutants, with the names changed in the code to
-match, so it is checked as thoroughly. `report` sets each original and its variant side by side;
-an agent that does much worse on the variant was likely recalling rather than solving.
+Each task tells the agent the exact `maelstrom test` command it will be graded with, so it can run the same test itself while it works.
 
-```sh
-distsys-eval tasks          # list them
-distsys-eval tasks echo     # everything the agent is told, including the exact grading command
+## How an attempt is scored
+
+1. **The agent works alone in a fresh container.** It can run commands and read and write files. The container has no network, so the agent can't look up a solution, and nothing it runs can touch the computer it's on.
+2. **When the agent stops, its code is graded.** It must build, then pass Maelstrom m times in a row. Every run has its own random faults and timing, so a program that only works when it's lucky gets caught.
+3. **Attempts add up to pass^k.** That's the chance that k attempts, picked at random, all pass. pass^1 says whether an agent can solve a task. pass^5 says whether you can rely on it to.
+
+A failed attempt gets one reason, so the report says *why* agents fail, not just how often:
+
+| reason | what happened |
+|---|---|
+| `out-of-steps` · `out-of-time` | the agent ran out of budget before it finished |
+| `doesnt-build` | the code didn't compile |
+| `crashed` | a node died, or Maelstrom couldn't finish the test |
+| `fails-without-faults` | wrong even on a healthy network |
+| `fails-under-faults` | right on a healthy network, wrong once it breaks |
+| `too-slow` | correct, but sends too many messages or takes too long |
+
+## Why the scores can be trusted
+
+A benchmark is only as good as its grader, so each task is checked before any agent is scored:
+
+- **Known-good code must pass.** Every task has a working reference solution.
+- **Known-bad code must fail.** Each task also has broken copies of its reference, **26 in all**, each with one realistic bug: like a message sent once and never retried, a counter that overwrites instead of adding, or offsets two nodes both hand out. If a mutant passes, the task is too weak.
+- **m is measured, not guessed.** Each mutant is run 20 times to see how often one Maelstrom run catches it. A task's m is the fewest runs that catch every one of its mutants 99% of the time.
+- **Memorized answers are found out.** The public challenges and their solutions are on GitHub. So four tasks also have a **variant**: the same problem with its messages and fields renamed and a different cluster size (a box office issuing tickets instead of nodes generating IDs). An agent that scores much worse on a variant was likely remembering, not solving.
+- **The harness's own failures don't count.** If Docker or the model server lets an attempt down, it's marked as an error and left out.
+
+## 🚀 Run it
+
+You need a Mac or Linux computer with Python 3.11 or newer and [Docker](https://www.docker.com/products/docker-desktop) (give it at least 6 GB of memory).
+
+```bash
+git clone https://github.com/karthiknarayan01/distsys-agent-eval
+cd distsys-agent-eval
+./eval.sh
 ```
 
-## Agents
+The first run sets everything up, asks which models to test, then runs every task and writes a report. It installs the package, builds the sandbox image, and installs [Ollama](https://ollama.com) (asking first) and the models.
 
-An agent gets the task's brief and the container's working directory, reachable only through
-running a command, reading a file and writing a file. It works until it says it's done or runs out
-of the task's time or steps, and writes a transcript of everything it did. It never sees the grade.
-Any agent fits behind `Agent` in `distsys_eval/agent.py`.
+| model | what you need |
+|---|---|
+| **Qwen 3.5**, on your computer (4B, 9B or 27B) | Nothing. It's free, and Ollama runs it locally. |
+| **Any other Ollama model** | Its name. |
+| **DeepSeek** | `DEEPSEEK_API_KEY`. You pay per token. |
 
-The built-in one is [Shellmate](https://github.com/karthiknarayan01/Shellmate)'s agent loop,
-pinned to a commit, with `shell`, `read_file` and `write_file` tools that work inside the container.
-It runs a local Qwen model through Ollama, DeepSeek or Claude; the model is called from the host,
-so the container itself never needs a network.
+A full run takes hours. Stop it whenever you like: running `./eval.sh` again carries on where it left off. Results go to `results/`: `report.txt` has the tables, and `pass-k.svg` is a chart of every agent's pass^k.
 
-Any command-line coding agent can be run instead. Build an image from the sandbox image with the
-agent installed, and give the command that starts it; the brief is in the file `$BRIEF`:
+<details>
+<summary><b>More options</b></summary>
 
-```sh
+<br>
+
+```bash
+./eval.sh --models qwen3.5:9b --yes                     # no questions
+./eval.sh --models qwen3.5:4b,qwen3.5:9b --attempts 3   # several models, fewer attempts
+./eval.sh --tasks "echo unique-ids" --jobs 2            # some tasks, two attempts at a time
+./eval.sh --dry-run                                     # show what it would run
+```
+
+API keys can also go in a `.env` file next to `eval.sh`.
+
+</details>
+
+<details>
+<summary><b>Test your own agent</b></summary>
+
+<br>
+
+The built-in agent is [Shellmate](https://github.com/karthiknarayan01/Shellmate)'s agent loop, with `shell`, `read_file` and `write_file` tools that work inside the container. Its model is called from your computer, so the container never needs a network.
+
+Any command-line coding agent can be tested instead. Build an image from the sandbox image with the agent installed, and give the command that starts it; the task's instructions are in the file `$BRIEF`:
+
+```bash
 distsys-eval run --command 'claude -p "$(cat "$BRIEF")" --dangerously-skip-permissions' \
     --name claude-code --image my-sandbox-with-claude --network --env ANTHROPIC_API_KEY
 ```
 
-The command runs in the working directory until it exits or the task's time runs out. Its output
-is the transcript. Its steps and tokens aren't known to the harness, so they're recorded as 0 and
-the step limit isn't enforced, and a command that exits with an error is recorded as an `error`,
-since that is usually the agent's own setup failing. Such an agent calls its model from inside
-the container, so `--network` gives the sandbox one; it could then fetch a solution as well, which
-is worth keeping in mind when comparing its results with an agent's that had no network.
+Such an agent calls its model from inside the container, so `--network` gives it one. That also means it could fetch a solution, so keep that in mind when comparing it with an agent that had no network. The harness can't see its steps or tokens, so only its time limit is enforced.
 
-## Grading
+In Python, any agent fits behind the `Agent` interface in `distsys_eval/agent.py`.
 
-An attempt is graded by building it with `go build` and running Maelstrom the task's m times,
-stopping at the first run that isn't valid. It passes only if every run is valid. A failure gets
-one category: `doesnt-build`, `crashed`, `fails-without-faults`, `fails-under-faults` (valid
-again once the task's faults are switched off), or `too-slow` (valid, but over the task's
-message or latency targets). A run Maelstrom couldn't decide is an `error` and isn't counted
-against the agent.
+</details>
 
-```sh
-distsys-eval grade echo path/to/solution    # grade a directory in a fresh sandbox
+<details>
+<summary><b>Submit a result</b></summary>
+
+<br>
+
+1. Run every task with at least 5 attempts, on an image built from the commit you're on. Run again until the report shows no errors: only the attempts that errored are run again.
+2. Open a pull request with `results/<agent>/` (its `results.jsonl`, transcripts and code) and the redrawn `results/pass-k.svg`.
+3. In the pull request, give the exact command, the model and its settings, and the commit it ran on. Results from different commits can't be compared if a task changed in between.
+
+</details>
+
+<details>
+<summary><b>For developers</b></summary>
+
+<br>
+
+**Commands.** Everything `eval.sh` does is a `distsys-eval` command:
+
+```bash
+distsys-eval tasks                     # the tasks, and their m
+distsys-eval tasks echo                # everything the agent is told
+distsys-eval grade echo path/to/code   # grade a directory in a fresh sandbox
+distsys-eval run --provider ollama --model qwen3.5:9b --attempts 5
+distsys-eval report results/* --chart results/pass-k.svg
+distsys-eval validate --jobs 3         # references pass, mutants fail
+distsys-eval calibrate --jobs 3 --write
 ```
 
-## Running an agent
+**A task** is a directory in `tasks/`:
+- `task.toml` sets the Maelstrom workload and flags, m, and the agent's minutes and steps. It can also set `[targets]` for messages and latency, `[rename]` for the protocol's names, and `variant-of`.
+- `prompt.md` is the problem, in our own words.
+- `reference/` is the working solution, and `mutants/*.patch` are the broken copies of it.
+- `calibration.toml` holds the measured counts.
 
-The quick way is `./eval.sh`. It sets everything up (a virtual environment, Docker and the
-sandbox image, Ollama and the models), asks which models to run and how many attempts, runs
-them, and writes every agent's table to `results/report.txt` and a chart to `results/pass-k.svg`:
+`maelstrom-rename` (`docker/rename/`) sits between Maelstrom and the agent's program to translate a renamed protocol.
 
-```sh
-./eval.sh                                        # asks
-./eval.sh --models qwen3.5:9b --yes              # no questions
-./eval.sh --models qwen3.5:4b,qwen3.5:9b --attempts 3 --tasks "echo unique-ids"
-```
+**Results** for each agent go in `results/<agent>/`:
+- `results.jsonl` has one line per attempt: the outcome, the reason, and the steps, tokens and time.
+- `transcripts/` holds everything the agent did.
+- `code/` holds what it left behind.
 
-Underneath, `run` makes n attempts at each task, each in a fresh sandbox, and grades each one as
-it ends.
+**Developing:**
 
-```sh
-ollama pull qwen3.5:9b
-distsys-eval run --provider ollama --attempts 5             # every task
-distsys-eval run echo --provider deepseek --jobs 2          # one task, two attempts at a time
-```
-
-Everything goes into `results/<agent>/` (or `--out`):
-
-```
-results.jsonl          one line per attempt: outcome, failure category, steps, tokens, time
-transcripts/echo-1.jsonl   everything the agent did in attempt 1 at echo
-code/echo-1/           what it left in the working directory
-```
-
-An attempt the harness let down is recorded as an `error` and isn't scored: Docker failed, the
-model couldn't be reached, or Maelstrom couldn't decide a run. Running the same command again
-carries on: attempts already recorded are kept, and only missing ones and errors are run again.
-
-## Reading the results
-
-```sh
-distsys-eval report results/shellmate-ollama-qwen3.5-9b     # a table per agent
-distsys-eval report results/* --json                        # every number, for other tools
-distsys-eval report results/* --chart results/pass-k.svg    # and a chart of overall pass^k
-```
-
-For each task the report gives pass^k: the chance that k of its attempts, drawn at random, all
-pass. With c of n attempts passing it is C(c, k) / C(n, k), so pass^1 is the pass rate and pass^n
-is 1 only if every attempt passed. An agent that solves a task now and then scores well at k = 1
-and falls away as k grows; one that can be relied on stays up. The overall row is the mean over
-tasks. Errors are left out of every number and counted on their own.
-
-Each failed attempt is given one reason: the agent ran out of steps or time (or its reply hit the
-model's output cap), or else the grader's category. The report also shows the mean steps and
-minutes per attempt, and the tokens each task used.
-
-## Submitting a result
-
-A result is one agent's attempts at every task, kept in the repository so anyone can check it.
-
-1. Run every task, at least 5 attempts each, with the image built from this commit:
-   `distsys-eval build-image`, then `distsys-eval run ... --attempts 5`. Run it again until it
-   reports no errors: it only reruns attempts that errored.
-2. Check `distsys-eval report results/<agent>` looks right, then redraw the chart with every
-   agent in `results/`: `distsys-eval report results/* --chart results/pass-k.svg`.
-3. Open a pull request with `results/<agent>/` (its `results.jsonl`, transcripts and code) and the
-   chart. Say in it the exact `run` command, the model and its settings, and the harness commit
-   it ran on. Results from different harness commits aren't comparable if a task changed between
-   them.
-
-## Trusting the grader
-
-Every task carries code whose grade is known: `reference/`, a correct solution that must pass,
-and `mutants/*.patch`, copies of it with one realistic bug each, which must fail (and not just
-fail to build). `validate` grades them all and says which came out wrong. It takes a while, so
-it isn't part of CI: run it after changing a task or the grader, locally or from the `validate`
-workflow.
-
-```sh
-distsys-eval validate --jobs 3          # every task
-distsys-eval validate unique-ids        # one task
-```
-
-A mutant caught once may still slip past a single run on another day, so each task's `runs` (m)
-is measured rather than guessed. `calibrate` runs the reference and every mutant 20 times each,
-takes the lower 95% bound on how often one run catches each mutant, and sets m to the fewest
-runs that catch every mutant 99% of the time. The counts are kept in each task's
-`calibration.toml`. It runs on demand from the `calibrate` workflow, since it takes about an hour.
-
-```sh
-distsys-eval calibrate --jobs 3 --write    # measure, then write calibration.toml and runs
-```
-
-## Development
-
-```sh
+```bash
 python -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"
 ruff check . && python -m pytest -q
-```
-
-Every attempt runs in a container built from `docker/Dockerfile` (Go, a Java runtime, gnuplot,
-Graphviz and Maelstrom 0.2.4). Build it once, then run the Docker tests against it:
-
-```sh
 distsys-eval build-image
 SANDBOX_TEST_IMAGE=distsys-agent-eval/sandbox:0.1.0 python -m pytest -q -m docker
 ```
+
+CI runs the tests and the Docker tests on every pull request. `validate` and `calibrate` take up to a few hours, so they run only when started by hand, from the `validate` and `calibrate` workflows.
+
+</details>
+
+<div align="center">
+<sub>Graded by <a href="https://github.com/jepsen-io/maelstrom">Maelstrom</a> 0.2.4. The task families follow Fly.io's <a href="https://fly.io/dist-sys/">Gossip Glomers</a>, with every prompt written fresh.</sub>
+</div>
