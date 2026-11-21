@@ -73,7 +73,12 @@ jobs:
           # Keep the model loaded between steps: grading can take longer than Ollama's default 5 minutes.
           OLLAMA_KEEP_ALIVE=-1 nohup ollama serve > "$RUNNER_TEMP/ollama.log" 2>&1 &
           for _ in $(seq 30); do curl -sf http://127.0.0.1:11434/api/version && break; sleep 2; done
-          ollama pull "${{ matrix.model }}"
+          # Many jobs pull at once, and the registry sometimes answers 503: try again, waiting longer each time.
+          for try in 1 2 3 4 5 6; do
+            ollama pull "${{ matrix.model }}" 2>&1 | tail -n 3 && ollama show "${{ matrix.model }}" > /dev/null && break
+            [ "$try" -lt 6 ] || exit 1
+            sleep $((try * 30))
+          done
       - name: Run the attempts
         env:
           TOGETHER_API_KEY: ${{ secrets.TOGETHER_API_KEY }}
