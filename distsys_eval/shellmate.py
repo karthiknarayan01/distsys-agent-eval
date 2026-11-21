@@ -44,6 +44,8 @@ from runtime.tools import Tool, ToolRegistry
 from distsys_eval.agent import AgentRun, StopReason, Workspace
 from distsys_eval.sandbox import ExecResult, SandboxError
 from distsys_eval.tasks import Task
+from distsys_eval.together import DEFAULT_MODEL as TOGETHER_DEFAULT_MODEL
+from distsys_eval.together import together_model
 
 SYSTEM_PROMPT = (
     "You are a software engineer working alone in a Linux container, with a shell and tools to "
@@ -65,7 +67,11 @@ class ShellmateAgent:
 
     @classmethod
     def from_provider(cls, provider: str, model: str | None = None) -> ShellmateAgent:
-        """Shellmate with one of its providers: "ollama", "deepseek" or "anthropic"."""
+        """Shellmate with one of its providers ("ollama", "anthropic", "openai", "deepseek"),
+        or with a model served by Together ("together")."""
+        if provider == "together":
+            client = together_model(model)
+            return cls(client, f"shellmate/together/{model or TOGETHER_DEFAULT_MODEL}")
         client = make_model(provider, model)
         return cls(client, f"shellmate/{provider}/{model or DEFAULT_MODELS[provider]}")
 

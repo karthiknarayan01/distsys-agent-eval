@@ -1,0 +1,136 @@
+# Runs agents at the tasks on GitHub's runners, started by hand: add the "run-eval" label to a
+# pull request (or, once this file is on main, start it from the Actions tab). It never runs on
+# a push, since a full run takes hours.
+#
+# What runs comes from .github/eval-matrix.json: each model, with its provider, and the tasks
+# and attempts per task (a model can override both). Each model x task is its own job, so no
+# job comes near the 6-hour limit. Ollama models run on the runner's CPU; "together" models are
+# called on Together AI with the TOGETHER_API_KEY secret.
+#
+# Every job uploads its results/ (results.jsonl, transcripts, code). The report job merges them
+# into one results/<agent>/ per model and writes report.txt, report.json and pass-k.svg.
+name: eval
+
+on:
+  pull_request:
+    types: [labeled]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'run-eval'
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: One job per model and task
+        id: plan
+        shell: python
+        run: |
+          import json, os, pathlib
+          config = json.load(open(".github/eval-matrix.json"))
+          every_task = sorted(p.parent.name for p in pathlib.Path("tasks").glob("*/task.toml"))
+          jobs = []
+          for m in config["models"]:
+              for task in m.get("tasks") or config.get("tasks") or every_task:
+                  slug = f"{m['model']}-{task}".replace("/", "-").replace(":", "-")
+                  jobs.append({"provider": m["provider"], "model": m["model"], "task": task,
+                               "attempts": m.get("attempts", config["attempts"]), "slug": slug})
+          print(f"{len(jobs)} jobs")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              out.write(f"matrix={json.dumps({'include': jobs})}\n")
+
+  run:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+    name: ${{ matrix.model }} · ${{ matrix.task }}
+    steps:
+      - name: Free disk space for the model and the sandbox image
+        if: matrix.provider == 'ollama'
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install
+        run: pip install -e .
+      - name: Build the sandbox image
+        run: distsys-eval build-image --tag distsys-agent-eval/sandbox:ci
+      - name: Start Ollama and download the model
+        if: matrix.provider == 'ollama'
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+          sudo systemctl stop ollama || true
+          # Keep the model loaded between steps: grading can take longer than Ollama's default 5 minutes.
+          OLLAMA_KEEP_ALIVE=-1 nohup ollama serve > "$RUNNER_TEMP/ollama.log" 2>&1 &
+          for _ in $(seq 30); do curl -sf http://127.0.0.1:11434/api/version && break; sleep 2; done
+          ollama pull "${{ matrix.model }}"
+      - name: Run the attempts
+        env:
+          TOGETHER_API_KEY: ${{ secrets.TOGETHER_API_KEY }}
+        run: |
+          # Attempts the harness let down are errors; running again retries only those.
+          for pass in 1 2 3; do
+            distsys-eval run --provider "${{ matrix.provider }}" --model "${{ matrix.model }}" \
+              --attempts "${{ matrix.attempts }}" --image distsys-agent-eval/sandbox:ci \
+              "${{ matrix.task }}" | tee "$RUNNER_TEMP/run.log"
+            tail -n 1 "$RUNNER_TEMP/run.log" | grep -q " 0 errors" && break
+          done
+      - name: Keep Ollama's log with the results
+        if: always() && matrix.provider == 'ollama'
+        run: mkdir -p results && cp "$RUNNER_TEMP/ollama.log" "results/ollama-${{ matrix.slug }}.log" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: results-${{ matrix.slug }}
+          path: results/
+          if-no-files-found: warn
+
+  report:
+    needs: run
+    if: always() && needs.run.result != 'skipped'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install
+        run: pip install -e .
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: results-*
+          path: downloaded
+      - name: Merge every job's results, one directory per model
+        run: |
+          mkdir -p results/logs
+          for job in downloaded/*/; do
+            cp "$job"ollama-*.log results/logs/ 2>/dev/null || true
+            for agent in "$job"*/; do
+              [ -f "$agent/results.jsonl" ] || continue
+              name="$(basename "$agent")"
+              mkdir -p "results/$name"
+              rsync -a --exclude results.jsonl "$agent" "results/$name/"
+              cat "$agent/results.jsonl" >> "results/$name/results.jsonl"
+            done
+          done
+      - name: Report
+        run: |
+          dirs=$(ls -d results/*/ | grep -v '/logs/$')
+          distsys-eval report $dirs --chart results/pass-k.svg | tee results/report.txt
+          distsys-eval report $dirs --json > results/report.json
+          { echo '```'; cat results/report.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: results-all
+          path: results/
