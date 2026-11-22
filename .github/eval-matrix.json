@@ -1,12 +1,10 @@
 {
-  "attempts": 2,
-  "tasks": [],
+  "attempts": 0,
+  "tasks": ["kafka-single-node"],
   "models": [
-    {"provider": "together", "model": "MiniMaxAI/MiniMax-M3.1-Flash",
-     "build_args": ["STRIP_CHECKER_SOURCE=1"], "validate": true,
-     "out": "shellmate-together-MiniMaxAI-MiniMax-M3.1-Flash-no-checker-source"},
-    {"provider": "together", "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
-     "build_args": ["STRIP_CHECKER_SOURCE=1"], "validate": true,
-     "out": "shellmate-together-deepseek-ai-DeepSeek-V4.1-Flash-1017-no-checker-source"}
+    {"provider": "together", "model": "MiniMaxAI/MiniMax-M3.1-Flash", "validate": true,
+     "out": "validate-normal-image"},
+    {"provider": "together", "model": "MiniMaxAI/MiniMax-M3.1-Flash", "validate": true,
+     "build_args": ["STRIP_CHECKER_SOURCE=1"], "out": "validate-stripped-image"}
   ]
 }
