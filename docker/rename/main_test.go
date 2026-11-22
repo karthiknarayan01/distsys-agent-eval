@@ -72,3 +72,44 @@ func TestTwoNamesRenamedToOneAreRefused(t *testing.T) {
 		t.Fatal("loaded a map that can't be reversed")
 	}
 }
+
+func TestARequestToAServiceIsAnsweredWithAnError(t *testing.T) {
+	line := []byte(`{"src":"n1","dest":"lin-kv","body":{"type":"read","msg_id":7,"key":"x"}}`)
+	got := decode(t, serviceError(line))
+	want := decode(t, []byte(`{"src":"lin-kv","dest":"n1","body":{"type":"error","in_reply_to":7,"code":10,"text":"lin-kv is turned off for this task"}}`))
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+}
+
+func TestMessagesToNodesAndClientsAreNotTurnedAway(t *testing.T) {
+	for _, line := range []string{
+		`{"src":"n1","dest":"n2","body":{"type":"append_entries","msg_id":3}}`,
+		`{"src":"n1","dest":"c4","body":{"type":"read_ok","in_reply_to":1,"value":3}}`,
+		`not a message`,
+	} {
+		if answer := serviceError([]byte(line)); answer != nil {
+			t.Fatalf("%s was turned away: %s", line, answer)
+		}
+	}
+}
+
+func TestTheRelayTurnsAwayServiceRequestsAndPassesTheRest(t *testing.T) {
+	in := strings.NewReader(`{"src":"n1","dest":"seq-kv","body":{"type":"read","msg_id":1,"key":"k"}}` + "\n" +
+		`{"src":"n1","dest":"n2","body":{"type":"gossip","msg_id":2}}` + "\n")
+	var out, back strings.Builder
+	relay(in, &out, toClient, renames{}, serviceError, &back)
+	if !strings.Contains(out.String(), `"dest":"n2"`) || strings.Contains(out.String(), "seq-kv") {
+		t.Fatalf("passed on: %s", out.String())
+	}
+	if !strings.Contains(back.String(), `"in_reply_to":1`) {
+		t.Fatalf("answered: %s", back.String())
+	}
+}
+
+func TestNoRenamesIsAllowed(t *testing.T) {
+	names, err := loadRenames("")
+	if err != nil || len(names.Types) != 0 || len(names.Fields) != 0 {
+		t.Fatalf("got %v, %v", names, err)
+	}
+}

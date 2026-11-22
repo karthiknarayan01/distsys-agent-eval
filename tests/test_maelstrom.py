@@ -45,6 +45,14 @@ def test_a_renamed_protocol_runs_the_renamer_and_tells_it_the_binary_and_the_nam
     ]
 
 
+def test_with_services_off_the_renamer_turns_them_away():
+    command = maelstrom_command("/work/node", MaelstromOptions("lin-kv", {"node-count": 3}, services=False))
+    assert shlex.split(command) == [
+        "MAELSTROM_RENAME_BIN=/work/node", "MAELSTROM_NO_SERVICES=1",
+        "maelstrom", "test", "--workload", "lin-kv", "--bin", RENAMER, "--node-count", "3",
+    ]
+
+
 def test_values_are_shell_quoted():
     command = maelstrom_command("/work/my node", MaelstromOptions("echo", {"nemesis": "partition; rm -rf /"}))
     assert shlex.split(command)[5] == "/work/my node"

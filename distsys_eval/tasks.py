@@ -147,15 +147,19 @@ def agent_limits(task_id: str, table: dict[str, Any]) -> AgentLimits:
 
 
 def maelstrom_options(task_id: str, table: dict[str, Any], rename_table: Any) -> MaelstromOptions:
-    """The [maelstrom] table: the workload, and the rest as `maelstrom test` flags; and the
+    """The [maelstrom] table: the workload, whether nodes may use Maelstrom's services
+    (`services = false` turns them away), and the rest as `maelstrom test` flags; and the
     [rename] table, if there is one."""
     flags = dict(table)
     workload = flags.pop("workload", None)
     if not isinstance(workload, str):
         raise TaskError(f"{task_id}: [maelstrom] needs a workload")
+    services = flags.pop("services", True)
+    if not isinstance(services, bool):
+        raise TaskError(f"{task_id}: [maelstrom] services must be true or false")
     names = None if rename_table is None else rename(task_id, rename_table)
     try:
-        return MaelstromOptions(workload, flags, names)
+        return MaelstromOptions(workload, flags, names, services)
     except ValueError as e:
         raise TaskError(f"{task_id}: [maelstrom] {e}") from e
 
@@ -223,12 +227,13 @@ def brief(
     """What the agent is told. The grading section is generated from the task itself, so it
     always shows the agent's limits and the exact command the attempt will be tested with."""
     times = "once" if runs == 1 else f"{runs} times"
+    wrapped = maelstrom.rename is not None or not maelstrom.services
     grading = (
         "## How it's graded\n\n"
         f"You have {limits.minutes:g} minutes and {limits.steps} steps, a step being one reply from you, "
         "however many tools it runs. If either runs out, you are stopped where you are.\n\n"
         f"When you stop, your program is built with `{BUILD}` and tested {times} with:\n\n"
-        f"    {maelstrom_command(WORKSPACE_BINARY if maelstrom.rename else BINARY, maelstrom)}\n\n"
+        f"    {maelstrom_command(WORKSPACE_BINARY if wrapped else BINARY, maelstrom)}\n\n"
         "The runs are independent, each with its own timing and faults. The attempt passes only if it "
         "builds and every run is valid."
     )
@@ -237,6 +242,13 @@ def brief(
             "\n\nMaelstrom itself uses other names for these messages. `maelstrom-rename` stands in "
             "for your program, starts it, and translates every message between a client and a node, "
             "so test with the command above as it is."
+        )
+    if not maelstrom.services:
+        grading += (
+            "\n\nMaelstrom's own services (seq-kv, lin-kv, lww-kv and lin-tso) are turned off for this "
+            "task: `maelstrom-rename` stands in for your program and answers any message to one of them "
+            "with an error, so your nodes must keep their state themselves. Test with the command above "
+            "as it is."
         )
     if targets:
         grading += "\n\n" + targets_section(targets)

@@ -127,6 +127,14 @@ def test_a_task_without_a_rename_tests_its_binary_directly(tmp_path):
     assert "--bin ./node" in task.brief and "maelstrom-rename" not in task.brief
 
 
+def test_a_task_can_turn_maelstroms_services_off(tmp_path):
+    toml = GOOD_TOML.replace('workload = "echo"', 'workload = "echo"\nservices = false')
+    task = load_task(make_task(tmp_path, toml))
+    assert task.maelstrom.services is False and "services" not in task.maelstrom.flags
+    assert "MAELSTROM_RENAME_BIN=/work/node MAELSTROM_NO_SERVICES=1" in task.brief
+    assert "your nodes must keep their state themselves" in task.brief
+
+
 def make_variant(root: Path, rename: str) -> Path:
     """An echo task with a reference, and a variant of it with the given [rename] tables."""
     (make_task(root) / "reference").mkdir()
@@ -165,6 +173,7 @@ def test_targets_load_as_numbers(tmp_path):
         (("steps = 50", "steps = 50\nturns = 9"), "[agent] has unknown keys: turns"),
         (("steps = 50", "steps = 0"), "minutes and steps must be positive"),
         (('workload = "echo"\n', ""), "[maelstrom] needs a workload"),
+        (('workload = "echo"', 'workload = "echo"\nservices = "no"'), "services must be true or false"),
         (("node-count = 1", "nodes = 1"), "not Maelstrom test flags: nodes"),
         (("runs = 2", "runs = = 2"), "task.toml:"),
         (("runs = 2", "runs = 2\ntargets = 3"), "targets must be a table"),

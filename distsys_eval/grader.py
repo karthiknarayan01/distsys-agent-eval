@@ -114,7 +114,7 @@ def without_faults(options: MaelstromOptions) -> MaelstromOptions | None:
     if not any(flag in options.flags for flag in FAULT_FLAGS):
         return None
     flags = {flag: value for flag, value in options.flags.items() if flag not in FAULT_FLAGS}
-    return MaelstromOptions(options.workload, flags, options.rename)
+    return replace(options, flags=flags)
 
 
 def describe(task: Task, grade: Grade) -> str:

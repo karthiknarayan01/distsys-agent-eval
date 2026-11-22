@@ -1,10 +1,16 @@
 // Command maelstrom-rename sits between Maelstrom and a node, so a task can give its protocol
-// names of its own. Maelstrom starts it as the node binary; it starts the real node and passes
-// every message through, renaming message types and body fields on the way.
+// names of its own, or turn Maelstrom's services off. Maelstrom starts it as the node binary; it
+// starts the real node and passes every message through, renaming message types and body fields
+// on the way.
 //
 //	MAELSTROM_RENAME_BIN=/work/node \
 //	MAELSTROM_RENAME='{"types": {"echo": "say", "echo_ok": "said"}, "fields": {"echo": "words"}}' \
 //	maelstrom test --workload echo --bin /usr/local/bin/maelstrom-rename ...
+//
+// With MAELSTROM_NO_SERVICES=1, a message from the node to one of Maelstrom's services (seq-kv,
+// lin-kv, lww-kv, lin-tso) is never delivered: the node gets an error reply instead, as if the
+// service didn't support the request. A task that asks for a linearizable store can then only be
+// solved by nodes that keep their state themselves. MAELSTROM_RENAME may be left out.
 //
 // The maps go from Maelstrom's names to the task's. Only messages between a client and a node
 // are renamed: a client's request on its way in, and the node's reply on its way out. Messages
@@ -22,6 +28,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"sync"
 )
 
 // maxLine is the longest message line we pass on. Maelstrom's own messages are far shorter,
@@ -37,11 +44,12 @@ func main() {
 	if binary == "" {
 		fail("MAELSTROM_RENAME_BIN is not set")
 	}
-	os.Exit(run(binary, toNode, toNode.inverse(), os.Stdin, os.Stdout))
+	noServices := os.Getenv("MAELSTROM_NO_SERVICES") == "1"
+	os.Exit(run(binary, toNode, toNode.inverse(), noServices, os.Stdin, os.Stdout))
 }
 
 // run starts the node and relays both directions until it exits, then returns its exit code.
-func run(binary string, toNode, fromNode renames, in io.Reader, out io.Writer) int {
+func run(binary string, toNode, fromNode renames, noServices bool, in io.Reader, out io.Writer) int {
 	node := exec.Command(binary)
 	node.Stderr = os.Stderr
 	nodeIn, err := node.StdinPipe()
@@ -56,11 +64,18 @@ func run(binary string, toNode, fromNode renames, in io.Reader, out io.Writer) i
 		fail("starting %s: %v", binary, err)
 	}
 
+	// Both directions may write to the node: Maelstrom's messages, and errors for turned-away
+	// service requests. Each line is written whole, under the lock.
+	toNodeIn := &lockedWriter{w: nodeIn}
+	var turnAway func(line []byte) []byte
+	if noServices {
+		turnAway = serviceError
+	}
 	go func() {
-		relay(in, nodeIn, fromClient, toNode)
+		relay(in, toNodeIn, fromClient, toNode, nil, nil)
 		nodeIn.Close()
 	}()
-	relay(nodeOut, out, toClient, fromNode)
+	relay(nodeOut, out, toClient, fromNode, turnAway, toNodeIn)
 
 	if err := node.Wait(); err != nil {
 		if exit, ok := err.(*exec.ExitError); ok {
@@ -71,16 +86,57 @@ func run(binary string, toNode, fromNode renames, in io.Reader, out io.Writer) i
 	return 0
 }
 
-// relay copies lines from in to out, renaming the messages that picked selects.
-func relay(in io.Reader, out io.Writer, picked func(from, to string) bool, names renames) {
+// relay copies lines from in to out, renaming the messages that picked selects. A line that
+// turnAway answers isn't copied: its answer goes to back instead.
+func relay(in io.Reader, out io.Writer, picked func(from, to string) bool, names renames,
+	turnAway func(line []byte) []byte, back io.Writer) {
 	scanner := bufio.NewScanner(in)
 	scanner.Buffer(make([]byte, 64<<10), maxLine)
-	writer := bufio.NewWriter(out)
 	for scanner.Scan() {
-		writer.Write(translate(scanner.Bytes(), picked, names))
-		writer.WriteByte('\n')
-		writer.Flush()
+		if turnAway != nil {
+			if answer := turnAway(scanner.Bytes()); answer != nil {
+				back.Write(append(answer, '\n'))
+				continue
+			}
+		}
+		out.Write(append(translate(scanner.Bytes(), picked, names), '\n'))
 	}
+}
+
+// services are Maelstrom's built-in services, by the node ids they answer to.
+var services = map[string]bool{"seq-kv": true, "lin-kv": true, "lww-kv": true, "lin-tso": true}
+
+// serviceError answers a node's request to one of Maelstrom's services with an error from that
+// service (code 10, not supported), or returns nil for any other line.
+func serviceError(line []byte) []byte {
+	var message struct {
+		Src  string `json:"src"`
+		Dest string `json:"dest"`
+		Body struct {
+			MsgID *int `json:"msg_id"`
+		} `json:"body"`
+	}
+	if json.Unmarshal(line, &message) != nil || !services[message.Dest] {
+		return nil
+	}
+	body := map[string]any{"type": "error", "code": 10, "text": message.Dest + " is turned off for this task"}
+	if message.Body.MsgID != nil {
+		body["in_reply_to"] = *message.Body.MsgID
+	}
+	answer, _ := json.Marshal(map[string]any{"src": message.Dest, "dest": message.Src, "body": body})
+	return answer
+}
+
+// lockedWriter writes each line whole, so two goroutines never interleave their writes.
+type lockedWriter struct {
+	mu sync.Mutex
+	w  io.Writer
+}
+
+func (l *lockedWriter) Write(p []byte) (int, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.w.Write(p)
 }
 
 // translate renames one line if it is a message that picked selects; anything else comes back
@@ -132,6 +188,9 @@ type renames struct {
 // renamed back.
 func loadRenames(text string) (renames, error) {
 	var names renames
+	if text == "" {
+		return names, nil
+	}
 	if err := json.Unmarshal([]byte(text), &names); err != nil {
 		return names, err
 	}

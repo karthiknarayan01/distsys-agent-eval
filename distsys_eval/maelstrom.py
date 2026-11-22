@@ -72,6 +72,7 @@ class MaelstromOptions:
     workload: str
     flags: dict[str, str | int | float | bool] = field(default_factory=dict)
     rename: Rename | None = None
+    services: bool = True  # whether nodes may use Maelstrom's own services, such as lin-kv
 
     def __post_init__(self) -> None:
         unknown = sorted(set(self.flags) - FLAGS)
@@ -124,13 +125,18 @@ async def run_maelstrom(
 
 
 def maelstrom_command(binary: str, options: MaelstromOptions) -> str:
-    """The `maelstrom test` command line, every value shell-quoted. With a rename, Maelstrom runs
-    maelstrom-rename, told the real binary (which must be an absolute path, since Maelstrom starts
-    nodes in a directory of its own) and the names through the environment."""
+    """The `maelstrom test` command line, every value shell-quoted. With a rename, or with
+    Maelstrom's services turned off, Maelstrom runs maelstrom-rename, told the real binary (which
+    must be an absolute path, since Maelstrom starts nodes in a directory of its own), the names,
+    and whether to turn away messages to the services, through the environment."""
     environment = ""
-    if options.rename:
+    if options.rename or not options.services:
         # The shell takes NAME=value as an assignment only if the name itself isn't quoted.
-        variables = {"MAELSTROM_RENAME_BIN": binary, "MAELSTROM_RENAME": options.rename.as_json()}
+        variables = {"MAELSTROM_RENAME_BIN": binary}
+        if options.rename:
+            variables["MAELSTROM_RENAME"] = options.rename.as_json()
+        if not options.services:
+            variables["MAELSTROM_NO_SERVICES"] = "1"
         environment = "".join(f"{name}={shlex.quote(value)} " for name, value in variables.items())
         binary = RENAMER
     parts = ["maelstrom", "test", "--workload", options.workload, "--bin", binary]
