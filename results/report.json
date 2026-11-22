@@ -1,0 +1,131 @@
+[
+  {
+    "agent": "shellmate/together/deepseek-ai/DeepSeek-V4-Pro-0813",
+    "overall": {
+      "pass_hat": {
+        "1": 1.0,
+        "2": 1.0
+      },
+      "failures": {}
+    },
+    "variants": [],
+    "tasks": [
+      {
+        "task": "g-counter-variant",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 26.5,
+        "mean_minutes": 7.469166666666666,
+        "input_tokens": 1664159,
+        "output_tokens": 56865
+      },
+      {
+        "task": "txn-read-committed",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 18.5,
+        "mean_minutes": 4.609166666666667,
+        "input_tokens": 1290981,
+        "output_tokens": 50329
+      }
+    ]
+  },
+  {
+    "agent": "shellmate/together/zai-org/GLM-5.3",
+    "overall": {
+      "pass_hat": {},
+      "failures": {}
+    },
+    "variants": [
+      {
+        "original": "kafka-multi-node",
+        "variant": "kafka-multi-node-variant"
+      }
+    ],
+    "tasks": [
+      {
+        "task": "broadcast-few-messages",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 31,
+        "mean_minutes": 9.894166666666667,
+        "input_tokens": 2894328,
+        "output_tokens": 104872
+      },
+      {
+        "task": "g-counter-variant",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 27,
+        "mean_minutes": 10.070833333333333,
+        "input_tokens": 1429573,
+        "output_tokens": 62343
+      },
+      {
+        "task": "kafka-multi-node",
+        "attempts": 0,
+        "passed": 0,
+        "errors": 2,
+        "pass_hat": {},
+        "failures": {},
+        "mean_steps": 0.0,
+        "mean_minutes": 0.0,
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      {
+        "task": "kafka-multi-node-variant",
+        "attempts": 1,
+        "passed": 1,
+        "errors": 1,
+        "pass_hat": {
+          "1": 1.0
+        },
+        "failures": {},
+        "mean_steps": 85,
+        "mean_minutes": 27.648333333333333,
+        "input_tokens": 6069852,
+        "output_tokens": 174358
+      },
+      {
+        "task": "txn-read-committed",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 54,
+        "mean_minutes": 13.327499999999999,
+        "input_tokens": 5296579,
+        "output_tokens": 152428
+      }
+    ]
+  }
+]

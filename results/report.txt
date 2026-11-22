@@ -1,0 +1,20 @@
+shellmate/together/deepseek-ai/DeepSeek-V4-Pro-0813
+
+task                passed  pass^1  pass^2  steps  minutes  tokens in / out
+g-counter-variant   2/2     1.00    1.00    26     7.5      1.7M / 57k
+txn-read-committed  2/2     1.00    1.00    18     4.6      1.3M / 50k
+overall                     1.00    1.00
+
+shellmate/together/zai-org/GLM-5.3  (3 errors not scored)
+
+task                      passed  pass^1  pass^2  steps  minutes  tokens in / out
+broadcast-few-messages    2/2     1.00    1.00    31     9.9      2.9M / 105k
+g-counter-variant         2/2     1.00    1.00    27     10.1     1.4M / 62k
+kafka-multi-node          0/0                     0      0.0      0 / 0
+kafka-multi-node-variant  1/1     1.00            85     27.6     6.1M / 174k
+txn-read-committed        2/2     1.00    1.00    54     13.3     5.3M / 152k
+overall
+
+originals and their variants
+  original          pass^1  variant                   pass^1  change
+  kafka-multi-node  0.00    kafka-multi-node-variant  1.00    +1.00
