@@ -1,0 +1,160 @@
+# Runs agents at the tasks on GitHub's runners, started by hand: add the "run-eval" label to a
+# pull request (or, once this file is on main, start it from the Actions tab). It never runs on
+# a push, since a full run takes hours.
+#
+# What runs comes from .github/eval-matrix.json: each model, with its provider, and the tasks
+# and attempts per task (a model can override both). Each model x task is its own job, so no
+# job comes near the 6-hour limit. Ollama models run on the runner's CPU; "together" models are
+# called on Together AI with the TOGETHER_API_KEY secret. "include_runs" lists earlier runs of
+# this workflow whose results are merged in first, so a run can re-do only some tasks.
+#
+# Every job uploads its results/ (results.jsonl, transcripts, code, Maelstrom's output) as one
+# tarball. The report job merges them into one results/<agent>/ per model, writes report.txt,
+# report.json and pass-k.svg, uploads it all, and pushes it (without Maelstrom's output) to the
+# branch eval-results-<run id>.
+name: eval
+
+on:
+  pull_request:
+    types: [labeled]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'run-eval'
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: One job per model and task
+        id: plan
+        shell: python
+        run: |
+          import json, os, pathlib
+          config = json.load(open(".github/eval-matrix.json"))
+          every_task = sorted(p.parent.name for p in pathlib.Path("tasks").glob("*/task.toml"))
+          jobs = []
+          for m in config["models"]:
+              for task in m.get("tasks") or config.get("tasks") or every_task:
+                  slug = f"{m['model']}-{task}".replace("/", "-").replace(":", "-")
+                  jobs.append({"provider": m["provider"], "model": m["model"], "task": task,
+                               "attempts": m.get("attempts", config["attempts"]), "slug": slug})
+          print(f"{len(jobs)} jobs")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              out.write(f"matrix={json.dumps({'include': jobs})}\n")
+
+  run:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+    name: ${{ matrix.model }} · ${{ matrix.task }}
+    steps:
+      - name: Free disk space for the model and the sandbox image
+        if: matrix.provider == 'ollama'
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install
+        run: pip install -e .
+      - name: Build the sandbox image
+        run: distsys-eval build-image --tag distsys-agent-eval/sandbox:ci
+      - name: Start Ollama and download the model
+        if: matrix.provider == 'ollama'
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+          sudo systemctl stop ollama || true
+          # Keep the model loaded between steps: grading can take longer than Ollama's default 5 minutes.
+          OLLAMA_KEEP_ALIVE=-1 nohup ollama serve > "$RUNNER_TEMP/ollama.log" 2>&1 &
+          for _ in $(seq 30); do curl -sf http://127.0.0.1:11434/api/version && break; sleep 2; done
+          # Many jobs pull at once, and the registry sometimes answers 503: try again, waiting longer each time.
+          for try in 1 2 3 4 5 6; do
+            ollama pull "${{ matrix.model }}" 2>&1 | tail -n 3 && ollama show "${{ matrix.model }}" > /dev/null && break
+            [ "$try" -lt 6 ] || exit 1
+            sleep $((try * 30))
+          done
+      - name: Run the attempts
+        env:
+          TOGETHER_API_KEY: ${{ secrets.TOGETHER_API_KEY }}
+        run: |
+          # Attempts the harness let down are errors; running again retries only those.
+          for pass in 1 2 3; do
+            distsys-eval run --provider "${{ matrix.provider }}" --model "${{ matrix.model }}" \
+              --attempts "${{ matrix.attempts }}" --image distsys-agent-eval/sandbox:ci \
+              "${{ matrix.task }}" | tee "$RUNNER_TEMP/run.log"
+            tail -n 1 "$RUNNER_TEMP/run.log" | grep -q " 0 errors" && break
+          done
+      - name: Pack the results, with Ollama's log
+        if: always()
+        run: |
+          mkdir -p results
+          if [ -f "$RUNNER_TEMP/ollama.log" ]; then cp "$RUNNER_TEMP/ollama.log" "results/ollama-${{ matrix.slug }}.log"; fi
+          # A tarball, since Maelstrom names some files with characters artifacts don't allow.
+          tar czf results.tgz results
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: results-${{ matrix.slug }}
+          path: results.tgz
+
+  report:
+    needs: run
+    if: always() && needs.run.result != 'skipped'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install
+        run: pip install -e .
+      - name: Download every job's results, earlier runs first
+        run: |
+          i=0
+          for id in $(jq -r '.include_runs // [] | .[]' .github/eval-matrix.json) "$GITHUB_RUN_ID"; do
+            i=$((i + 1))
+            gh run download "$id" --repo "$GITHUB_REPOSITORY" --pattern 'results-*' --dir "downloaded/$i-$id"
+            rm -rf "downloaded/$i-$id/results-all"
+          done
+      - name: Merge them, one directory per model
+        run: |
+          rm -rf results  # report only this run's models, not results already committed
+          jobs=$(for run in $(ls downloaded | sort -n); do ls -d "downloaded/$run"/*/; done)
+          python -m distsys_eval.merge results $jobs
+      - name: Report
+        run: |
+          dirs=$(ls -d results/*/ | grep -v '/logs/$')
+          distsys-eval report $dirs --chart results/pass-k.svg | tee results/report.txt
+          distsys-eval report $dirs --json > results/report.json
+          { echo '```'; cat results/report.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Pack everything
+        run: tar czf results.tgz results
+      - uses: actions/upload-artifact@v4
+        with:
+          name: results-all
+          path: results.tgz
+      - name: Push the results to a branch
+        run: |
+          branch="eval-results-$GITHUB_RUN_ID"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan "$branch"
+          git rm -rqf --cached .
+          git add -f results ':(exclude,glob)results/*/code/*/store/**'
+          git commit -qm "Eval results from run $GITHUB_RUN_ID"
+          git push origin "HEAD:refs/heads/$branch"
