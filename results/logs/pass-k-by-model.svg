@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 382" width="720" height="382" role="img" aria-label="pass^1 and pass^2 by model: MiniMax M3.1 Flash 1.00 and 1.00, DeepSeek V4.1 Flash 1.00 and 1.00, DeepSeek V4 Pro 0.93 and 0.86, Inkling 0.80 and 0.71, GLM-5.3 0.77 and 0.67">
+<style>svg{font:13px system-ui,-apple-system,'Segoe UI',sans-serif}.bg{fill:#fcfcfb}.ink{fill:#0b0b0b}.muted{fill:#52514e}.grid{stroke:#e1e0d9;stroke-width:1}.axis{stroke:#a3a29c;stroke-width:1}.p1{fill:#2a78d6}.p2{fill:#eb6834}@media (prefers-color-scheme: dark){.bg{fill:#1a1a19}.ink{fill:#f0efec}.muted{fill:#c3c2b7}.grid{stroke:#2c2c2a}.axis{stroke:#5f5e58}.p1{fill:#3987e5}.p2{fill:#d95926}}</style>
+<rect class="bg" width="720" height="382" rx="8"/>
+<text class="ink" x="24" y="30" font-size="16" font-weight="600">Share of tasks passed, 15 tasks, 2 attempts each</text>
+<rect class="p1" x="24" y="44" width="12" height="12" rx="3"/><text class="muted" x="42" y="54">pass^1: one attempt passes</text>
+<rect class="p2" x="240" y="44" width="12" height="12" rx="3"/><text class="muted" x="258" y="54">pass^2: both attempts pass</text>
+<line class="grid" x1="230" y1="72" x2="230" y2="330"/>
+<text class="muted" x="230" y="346" text-anchor="middle">0.00</text>
+<line class="grid" x1="335.0" y1="72" x2="335.0" y2="330"/>
+<text class="muted" x="335.0" y="346" text-anchor="middle">0.25</text>
+<line class="grid" x1="440.0" y1="72" x2="440.0" y2="330"/>
+<text class="muted" x="440.0" y="346" text-anchor="middle">0.50</text>
+<line class="grid" x1="545.0" y1="72" x2="545.0" y2="330"/>
+<text class="muted" x="545.0" y="346" text-anchor="middle">0.75</text>
+<line class="grid" x1="650.0" y1="72" x2="650.0" y2="330"/>
+<text class="muted" x="650.0" y="346" text-anchor="middle">1.00</text>
+<text class="ink" x="218" y="91" text-anchor="end">MiniMax M3.1 Flash</text>
+<text class="muted" x="218" y="108" text-anchor="end" font-size="12">MiniMax · 428B MoE</text>
+<path class="p1" d="M230,78 h416.0 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-416.0 z"/>
+<text class="ink" x="656.0" y="90" font-size="12">1.00</text>
+<path class="p2" d="M230,94 h416.0 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-416.0 z"/>
+<text class="ink" x="656.0" y="106" font-size="12">1.00</text>
+<text class="ink" x="218" y="143" text-anchor="end">DeepSeek V4.1 Flash</text>
+<text class="muted" x="218" y="160" text-anchor="end" font-size="12">DeepSeek · 552B MoE</text>
+<path class="p1" d="M230,130 h416.0 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-416.0 z"/>
+<text class="ink" x="656.0" y="142" font-size="12">1.00</text>
+<path class="p2" d="M230,146 h416.0 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-416.0 z"/>
+<text class="ink" x="656.0" y="158" font-size="12">1.00</text>
+<text class="ink" x="218" y="195" text-anchor="end">DeepSeek V4 Pro</text>
+<text class="muted" x="218" y="212" text-anchor="end" font-size="12">DeepSeek · 1.6T MoE</text>
+<path class="p1" d="M230,182 h386.6 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-386.6 z"/>
+<text class="ink" x="626.6" y="194" font-size="12">0.93</text>
+<path class="p2" d="M230,198 h357.2 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-357.2 z"/>
+<text class="ink" x="597.2" y="210" font-size="12">0.86</text>
+<text class="ink" x="218" y="247" text-anchor="end">Inkling</text>
+<text class="muted" x="218" y="264" text-anchor="end" font-size="12">Thinking Machines · 975B MoE</text>
+<path class="p1" d="M230,234 h332.0 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-332.0 z"/>
+<text class="ink" x="572.0" y="246" font-size="12">0.80</text>
+<path class="p2" d="M230,250 h294.2 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-294.2 z"/>
+<text class="ink" x="534.2" y="262" font-size="12">0.71</text>
+<text class="ink" x="218" y="299" text-anchor="end">GLM-5.3</text>
+<text class="muted" x="218" y="316" text-anchor="end" font-size="12">Z.ai</text>
+<path class="p1" d="M230,286 h319.40000000000003 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-319.40000000000003 z"/>
+<text class="ink" x="559.4000000000001" y="298" font-size="12">0.77</text>
+<path class="p2" d="M230,302 h277.40000000000003 a4,4 0 0 1 4,4 v6 a4,4 0 0 1 -4,4 h-277.40000000000003 z"/>
+<text class="ink" x="517.4000000000001" y="314" font-size="12">0.67</text>
+<line class="axis" x1="230" y1="72" x2="230" y2="330"/>
+<text class="muted" x="24" y="370" font-size="12">All five called on Together AI. DeepSeek V4 Pro and Inkling pass^2 cover the 14 tasks with two scored attempts.</text>
+</svg>
