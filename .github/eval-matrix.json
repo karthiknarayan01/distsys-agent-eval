@@ -1,6 +1,6 @@
 {
-  "attempts": 1,
-  "tasks": ["broadcast-fault-tolerant"],
+  "attempts": 2,
+  "tasks": [],
   "models": [
     {"provider": "together", "model": "thinkingmachines/Inkling"}
   ]
