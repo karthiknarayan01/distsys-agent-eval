@@ -2,77 +2,75 @@
 
 *Results from November 2026. The numbers are in the [README](README.md#-results-november-2026); this page explains them.*
 
-Five open-weights models each got 15 distributed systems tasks, from an echo server to read-committed transactions across a network split. Each wrote a Go program alone in a container. Jepsen's Maelstrom then ran the program as a cluster, injected faults, and checked every answer. Each model had 2 attempts per task.
+Five large open-weights models each got 15 distributed systems tasks, from an echo server to read-committed transactions across a network split. Each wrote a Go program alone in a container. Jepsen's Maelstrom then ran the program as a cluster, injected faults, and checked every answer. Each model had 2 attempts per task, and every model was called on Together AI.
 
-| model | ran on | pass^1 | pass^2 |
+| model | pass^1 | pass^2 | attempts passed |
 |---|---|---|---|
-| Inkling (975B MoE, 41B active) | Together AI | 0.80 | 0.71 |
-| ornith-1.5 9B | 4-vCPU runner, no GPU | 0.07 | 0.07 |
-| qwen3.5 9B | 4-vCPU runner, no GPU | 0.00 | 0.00 |
-| qwen3.5 4B | 4-vCPU runner, no GPU | 0.00 | 0.00 |
-| mimo-v2.6 9B | 4-vCPU runner, no GPU | 0.00 | 0.00 |
+| MiniMax M3.1 Flash | 1.00 | 1.00 | 30 / 30 |
+| DeepSeek V4.1 Flash 1017 | 1.00 | 1.00 | 30 / 30 |
+| DeepSeek V4 Pro 0813 | 0.93 | 0.86 | 27 / 29 |
+| Inkling | 0.80 | 0.71 | 24 / 29 |
+| GLM-5.3 | 0.77 | 0.67 | 23 / 30 |
 
-The short answer: a large open model can write this code, but not reliably. The small models, run on a CPU, never got far enough to show.
+The short answer: yes, the best open models now write this code reliably. Two of the five passed every attempt. Of the 14 failed attempts across all five, 9 are replies cut off before a finished program existed. Only Inkling's 5 are wrong programs.
+
+## Two perfect scores
+
+MiniMax M3.1 Flash and DeepSeek V4.1 Flash passed all 30 attempts each. That includes the tasks the others stumbled on: the Kafka-style logs under 1,000 requests a second, the counter that must stay exact through a split, and transactions that must stay available while the two nodes can't talk.
+
+Two habits set them apart, though with 30 attempts each these are patterns, not proof:
+
+- **They tested more.** The median attempt ran Maelstrom 3 times for MiniMax and 3.5 times for DeepSeek V4.1 Flash, against 2 for Inkling and DeepSeek V4 Pro. A bug that shows up one run in three is easier to catch the more you run.
+- **They read the grader.** In 25 of 30 attempts for MiniMax and 20 of 30 for DeepSeek V4.1 Flash, the agent opened Maelstrom's jar and read the Clojure source of the checker it would be graded by. Inkling and DeepSeek V4 Pro did this in 12. The container has no network and the test tool is installed for the agent to use, so this is fair play. But it's worth knowing that capable agents go looking for the grader, and that the tasks hold up when they find it.
+
+Their code also avoids the bugs that sank Inkling. In the counter variant, every attempt from both models re-sends its state on a timer, so an update lost to a network split is sent again later. In multi-node broadcast, every attempt guards its shared state with a mutex.
+
+## Cut off before finishing: DeepSeek V4 Pro and GLM-5.3
+
+The harness caps each model reply at 16,000 output tokens, the same for every model. A reasoning model that thinks for longer than that in one reply gets cut off, and the attempt ends there.
+
+That is every one of DeepSeek V4 Pro's 2 failures and GLM-5.3's 7. In 8 of the 9 it happened on the very first reply, before the agent had written a file. GLM-5.3 reasons at its maximum effort unless told otherwise, and on harder tasks its first plan didn't fit. The other 23 GLM-5.3 attempts and 27 DeepSeek V4 Pro attempts all produced programs, and every one of those programs passed.
+
+So these two scores measure how well each model fits the harness's output limit as much as how well it writes distributed systems code. A larger limit, or a lower reasoning effort for GLM-5.3, would likely raise both.
 
 ## Inkling: right most of the time, wrong in the classic ways
 
-Inkling passed 24 of its 29 scored attempts. It finished every task well inside its time budget, the longest in 12 minutes against limits of 15 to 60.
+Inkling passed 24 of its 29 scored attempts and finished every task inside its time budget. It is the only model whose failures are wrong programs, and each one tells you something.
 
-| task | passed | task | passed |
-|---|---|---|---|
-| echo | 2/2 | g-counter | 2/2 |
-| unique-ids | 2/2 | g-counter-variant | 1/2 |
-| unique-ids-variant | 2/2 | kafka-single-node | 1/2 |
-| broadcast-single-node | 2/2 | kafka-multi-node | 2/2 |
-| broadcast-multi-node | 1/2 | kafka-multi-node-variant | 0/1 |
-| broadcast-fault-tolerant | 2/2 | txn-read-committed | 1/2 |
-| broadcast-fault-tolerant-variant | 2/2 | | |
-| broadcast-few-messages | 2/2 | | |
-| broadcast-low-latency | 2/2 | | |
+**An update sent once and never retried** (g-counter-variant, `fails-under-faults`). Inkling built the counter as a CRDT: each node keeps its own count and sends its whole state to the others whenever it changes. But it sends that state only once, with fire-and-forget `Send`, at the moment of an increment. There is no periodic re-send. If the network is split at that moment, the update never arrives, and the final count stays wrong forever. Inkling's own test runs passed, and it stopped. The grader ran the test twice: the first run was valid, the second wasn't. This is exactly the failure that running the test m times exists to catch.
 
-Each of the 5 failures tells you something.
-
-**An update sent once and never retried** (g-counter-variant, `fails-under-faults`). Inkling built the counter as a CRDT: each node keeps its own count and sends its whole state to the others whenever it changes. But it sends that state only once, with fire-and-forget `Send`, at the moment of an increment. There is no periodic re-send. If the network is split at that moment, the update never arrives, and the final count stays wrong forever. Inkling's own test runs passed, and it stopped. The grader ran the test twice: the first run was valid, the second wasn't. This is exactly the failure m runs exist to catch.
-
-**A map with no lock** (broadcast-multi-node, `crashed`). The Maelstrom Go library runs message handlers concurrently. Inkling's broadcast node stored seen values in a plain Go map that every handler wrote to, with no mutex. Go kills a program that writes a map from two goroutines at once. The agent's own test passed. The grader's run ended with a crashed node. The other attempt at the same task used a mutex and passed.
+**A map with no lock** (broadcast-multi-node, `crashed`). The Maelstrom Go library runs message handlers concurrently. Inkling's broadcast node stored seen values in a plain Go map that every handler wrote to, with no mutex. Go stops a program that writes a map from two goroutines at once, the likely cause of the crash. The agent's own test passed; the grader's run ended with a crashed node. The other attempt at the same task used a mutex and passed.
 
 **Wrong on a healthy network** (kafka-single-node, `fails-without-faults`). A single-node log with a mutex-protected map passed the agent's own full-size test, then produced an invalid history in the grader's first run. The other attempt passed.
 
 **A crash under load** (kafka-multi-node-variant, `crashed`). This attempt stored each log as a JSON array in Maelstrom's `lin-kv` store, rewriting the whole array on every append. Its first grading run was valid, its second crashed. Along the way Maelstrom's checker ran out of memory, and Inkling raised its Java heap to 16 GB to get the test through.
 
-**A tool call written as text** (txn-read-committed, `doesnt-build`). Three steps in, Inkling wrote its next tool call as plain text (`<function>read_file</function>…`) instead of calling the tool. The harness took that as the agent's final answer, and the attempt ended with no program. That's a tool-calling slip, not a design mistake, but an agent has to get it right too.
+**A tool call written as text** (txn-read-committed, `doesnt-build`). Three steps in, Inkling wrote its next tool call as plain text (`<function>read_file</function>…`) instead of calling the tool. The harness took that as the agent's final answer, and the attempt ended with no program.
 
-The common thread: **every program that failed had passed its author's own test.** Each of these bugs shows up on some runs and not others, and Inkling's runs happened to miss it before it declared the program done. The grader runs it m times, enough to catch each task's known bugs 99% of the time.
+The common thread: **every program that failed had passed its author's own test.** Each of these bugs shows up on some runs and not others, and Inkling's runs happened to miss it before it declared the program done.
 
-### It read the grader's source
+## Variants: no sign of memorization
 
-In 12 of 29 attempts, Inkling unzipped Maelstrom's jar and read the Clojure source of the checker it would be graded by, to learn exactly what it checks. The container has no network, so this is fair play: the test tool is installed for the agent to use. But it's worth knowing that a capable agent goes looking for the grader, and that the tasks hold up when it finds it.
+Four tasks have a variant: the same problem with renamed messages and fields and a different cluster size. A model that remembered the public solutions would do worse on the variants. MiniMax and DeepSeek V4.1 Flash scored the same on all four pairs. The other three each lost points on a variant, but every one of those losses is a cut-off reply or one of Inkling's bugs above, not a sign the model leaned on the original's wording.
 
-### Variants: a hint of memorization
+## What this says about the benchmark
 
-Four tasks have a variant: the same problem with renamed messages and fields and a different cluster size. Inkling passed g-counter and kafka-multi-node every time, but their variants only 1 in 2 and 0 in 1. The other two pairs (unique-ids, broadcast-fault-tolerant) scored the same. Two attempts is too few to call this memorization, but it's the direction you'd expect if it were.
-
-## The small models: out of time before they started
-
-The four small models passed 2 of 120 attempts between them, both from ornith-1.5 at echo. 115 of the rest ended `out-of-time`. Two things compounded:
-
-**They were slow.** On a 4-vCPU runner with no GPU, a 9B model wrote at a few tokens a second. The median step took 100 to 190 seconds, against 7 for Inkling. In the 15 to 60 minutes a task allows, they averaged 13 to 23 steps. Inkling needed about 24 to finish a task.
-
-**They didn't know the library.** The tasks use Maelstrom's Go library, and the small models guessed at its API. qwen3.5 9B's first echo program called `maelstrom.Body` and `maelstrom.HANDLE_COMPLETE`, neither of which exists. In another task it expected `NewNode` to return two values. They then spent most of their steps reading `go doc` output, one type at a time, three minutes per step. Only 4 of their 120 attempts left a program that built.
-
-So these rows say: a 4B to 9B model on a laptop-class CPU can't solve these tasks in the time limit. They don't say whether the same models would on a GPU. That's the obvious next run.
+With two models at 30 of 30, these 15 tasks no longer separate the best open models. They still separate models that write correct code from ones that don't, and they catch real bugs that pass a single test run. The next version needs harder tasks: more nodes, nastier faults, and problems without a public reference solution.
 
 ## Caveats
 
-- **2 attempts per task.** pass^2 is the most this supports. A difference of one attempt moves a task's pass^1 by 0.5.
-- **The local models' hardware.** See above. Their scores mostly measure the runner.
-- **Inkling as Together serves it.** The model was called through Together's API. Its serving setup, such as quantization, isn't something this run controls.
-- **The kafka checker on small machines.** Maelstrom's kafka checker sometimes couldn't reach a verdict on these runners, most likely because it ran out of memory. Those runs count as harness errors, not failures. One Inkling attempt at kafka-multi-node-variant stayed undecided after retries and isn't scored, which leaves Inkling with 29 scored attempts.
+- **2 attempts per task.** pass^2 is the most this supports. One attempt moves a task's pass^1 by 0.5.
+- **Models as Together serves them.** Every model was called through Together's API. Its serving setup, such as quantization, isn't something this run controls.
+- **The output limit.** As above, 9 failures come from the 16,000-token reply limit, which treats models that think at length differently from ones that don't.
+- **2 attempts not scored.** One DeepSeek V4 Pro attempt lost its connection to Together mid-reply on every retry. One Inkling attempt at kafka-multi-node-variant left Maelstrom unable to reach a verdict, most likely because its checker ran out of memory on the runner. Both count as harness errors, not failures.
+- **An earlier run on CPUs.** Four 4B–9B models were first run in Ollama on the CI runner's CPU, with no GPU. At 100 to 190 seconds a step they ran out of time on almost every attempt, so those results measured the hardware, not the models, and they aren't reported here.
 
 ## Reproducing it
 
-Every attempt's results line, transcript and final code are in [`results/`](results/), one directory per model, and `results/report.txt` has the full per-task tables. The runs used GitHub Actions on commits `2cc8bfb`, `f12ead8` and `2d4d298`, which change only the harness. To rerun one model at one task locally:
+Every attempt's results line, transcript and final code are in [`results/`](results/), one directory per model, and `results/report.txt` has the full per-task tables. To run one model at one task:
 
 ```bash
-distsys-eval run --provider ollama --model qwen3.5:9b --attempts 2 echo
+TOGETHER_API_KEY=... distsys-eval run --provider together --model MiniMaxAI/MiniMax-M3.1-Flash --attempts 2 echo
 ```
+
+To run a set of models in CI, list them in `.github/eval-matrix.json` and add the `run-eval` label to a pull request.

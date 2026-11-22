@@ -12,34 +12,36 @@ then runs each program as a cluster, cuts the network apart, and checks every an
 
 ## 📊 Results (November 2026)
 
-<img src="results/pass-k-by-model.svg" alt="pass^1 and pass^2 by model: Inkling 0.80 and 0.71, ornith-1.5 9B 0.07, qwen3.5 9B, qwen3.5 4B and mimo-v2.6 9B 0.00" width="720">
+<img src="results/pass-k-by-model.svg" alt="pass^1 and pass^2 by model: MiniMax M3.1 Flash 1.00 and 1.00, DeepSeek V4.1 Flash 1.00 and 1.00, DeepSeek V4 Pro 0.93 and 0.86, Inkling 0.80 and 0.71, GLM-5.3 0.77 and 0.67" width="720">
 
-Five open-weights models, 15 tasks, 2 attempts at each.
+Five large open-weights models, 15 tasks, 2 attempts at each, all called on Together AI.
 
-| model | ran on | pass^1 | pass^2 | attempts passed | why the rest failed |
-|---|---|---|---|---|---|
-| **Inkling** (Thinking Machines, 975B MoE, 41B active) | Together AI | **0.80** | **0.71** | 24 / 29 | `crashed` 2 · `fails-under-faults` 1 · `fails-without-faults` 1 · `doesnt-build` 1 |
-| ornith-1.5 9B | runner CPU | 0.07 | 0.07 | 2 / 30 | `out-of-time` 28 |
-| qwen3.5 9B | runner CPU | 0.00 | 0.00 | 0 / 30 | `out-of-time` 28 · `doesnt-build` 2 |
-| qwen3.5 4B | runner CPU | 0.00 | 0.00 | 0 / 30 | `out-of-time` 29 · `doesnt-build` 1 |
-| mimo-v2.6 9B | runner CPU | 0.00 | 0.00 | 0 / 30 | `out-of-time` 30 |
+| model | pass^1 | pass^2 | attempts passed | why the rest failed |
+|---|---|---|---|---|
+| **MiniMax M3.1 Flash** (428B MoE, 23B active) | **1.00** | **1.00** | 30 / 30 | — |
+| **DeepSeek V4.1 Flash 1017** (552B MoE) | **1.00** | **1.00** | 30 / 30 | — |
+| DeepSeek V4 Pro 0813 (1.6T MoE, 49B active) | 0.93 | 0.86 | 27 / 29 | reply cut off before any code 2 |
+| Inkling (975B MoE, 41B active) | 0.80 | 0.71 | 24 / 29 | `crashed` 2 · `fails-under-faults` 1 · `fails-without-faults` 1 · `doesnt-build` 1 |
+| GLM-5.3 | 0.77 | 0.67 | 23 / 30 | reply cut off before finishing 7 |
 
 No attempt by any model failed as `too-slow`: every program that worked also stayed within the message and latency targets.
 
-- **Inkling solves most tasks, but not reliably.** It passed every attempt at 10 of 15 tasks. Its failures are classic distributed systems bugs: an update sent once and never retried, so a network split loses it, and a map shared by concurrent handlers with no lock, the likely cause of a node crash. Both programs passed the agent's own test run, then failed when the grader ran the test.
-- **The small models never got going.** On a 4-vCPU runner with no GPU, one step took them 100–190 seconds, against 7 for Inkling. They also didn't know the Maelstrom Go library, so they spent their few steps reading its docs. Almost none had a program that built when time ran out. These rows measure what fits on a CPU in the time limit, not what these models could do on a GPU.
-- **Variants hint at memorization, weakly.** Inkling passed g-counter and kafka-multi-node every time, but their renamed variants only 1 in 2 and 0 in 1. With 2 attempts that's a hint, not proof.
+- **Two models were perfect.** MiniMax M3.1 Flash and DeepSeek V4.1 Flash passed all 30 attempts, including the Kafka-style logs and the transactions that must stay available through a network split. Both ran Maelstrom more often while they worked (a median of 3 to 3.5 runs an attempt, against 2 for Inkling and DeepSeek V4 Pro).
+- **When DeepSeek V4 Pro and GLM-5.3 finished, they were right.** Every one of their 9 failures is a reply that hit the harness's limit of 16,000 output tokens per reply, almost always on the very first reply, before any code existed. GLM-5.3 reasons at its maximum effort by default. Every program either model actually finished passed.
+- **Only Inkling wrote wrong code.** Its 5 failures are real distributed systems bugs: an update sent once and never retried, so a network split loses it; a map written by concurrent handlers with no lock, the likely cause of a node crash; and a tool call written as plain text, which ended an attempt before any code.
+- **The tasks are near their ceiling.** With two models at 30 of 30, these 15 tasks no longer separate the best open models. Harder tasks are the next step.
 
 The full write-up, with each failure traced through its transcript, is in **[RESULTS.md](RESULTS.md)**. Every attempt's results line, transcript and final code are in [`results/`](results/), and `results/report.txt` has the per-task tables.
 
 <details>
 <summary><b>How this run was done</b></summary>
 
-- Each model × task ran as its own GitHub Actions job on a standard runner (4 vCPUs, 16 GB, no GPU). The local models ran in Ollama at its default 4-bit quantization; Inkling was called on Together AI, as served there.
-- 2 attempts per task, not the default 5, to keep the run to hours. pass^2 is the most these numbers support.
-- Inkling has 29 scored attempts, not 30: at kafka-multi-node-variant, Maelstrom couldn't reach a verdict on one attempt even after retries, so it was left out as a harness error. The kafka checker did this several times on these runners.
-- Inkling's scored attempts used 18.5M input and 0.3M output tokens, about $20 at Together's list price.
-- Ran on commits `2cc8bfb`, `f12ead8` and `2d4d298` of the `eval-run-nov-2026` branch. They change only the harness, not the tasks. The tasks' compiled binaries and Maelstrom's raw output aren't committed.
+- Each model × task ran as its own GitHub Actions job. The agent and Maelstrom ran on the runner; the model was called on Together AI, as served there.
+- 2 attempts per task, not the default 5. pass^2 is the most these numbers support.
+- 2 attempts are left out as harness errors, not failures: one DeepSeek V4 Pro attempt whose connection to Together dropped mid-reply on every retry, and one Inkling attempt Maelstrom couldn't reach a verdict on. pass^2 for those two models covers the 14 tasks with two scored attempts.
+- Every model got the same limits: the task's step and time budget, and 16,000 output tokens per reply.
+- At Together's list prices, with no prompt caching, the five runs come to about $120 in all: GLM-5.3 $46, DeepSeek V4 Pro $36, Inkling $22, DeepSeek V4.1 Flash $14, MiniMax M3.1 Flash $6. Together's caching of repeated prompts can bring the bill well below that.
+- The tasks' compiled binaries and Maelstrom's raw output aren't committed.
 
 </details>
 

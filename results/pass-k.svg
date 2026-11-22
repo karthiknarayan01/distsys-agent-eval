@@ -3,15 +3,15 @@
 <rect class="bg" width="720" height="400" rx="8"/>
 <text class="ink" x="56" y="28" font-size="16" font-weight="600">Overall pass^k</text>
 <rect class="s0" x="56" y="40" width="12" height="12" rx="3"/>
-<text class="muted" x="74" y="50">shellmate/ollama/mimo-v2.6:9b-q4_K_M</text>
-<rect class="s1" x="331.6" y="40" width="12" height="12" rx="3"/>
-<text class="muted" x="349.6" y="50">shellmate/ollama/ornith-1.5:9b</text>
-<rect class="s2" x="567.6" y="40" width="12" height="12" rx="3"/>
-<text class="muted" x="585.6" y="50">shellmate/ollama/qwen3.5:4b</text>
-<rect class="s3" x="783.8" y="40" width="12" height="12" rx="3"/>
-<text class="muted" x="801.8" y="50">shellmate/ollama/qwen3.5:9b</text>
-<rect class="s4" x="1000.0" y="40" width="12" height="12" rx="3"/>
-<text class="muted" x="1018.0" y="50">shellmate/together/thinkingmachines/Inkling</text>
+<text class="muted" x="74" y="50">shellmate/together/MiniMaxAI/MiniMax-M3.1-Flash</text>
+<rect class="s1" x="404.2" y="40" width="12" height="12" rx="3"/>
+<text class="muted" x="422.2" y="50">shellmate/together/deepseek-ai/DeepSeek-V4-Pro-0813</text>
+<rect class="s2" x="778.8" y="40" width="12" height="12" rx="3"/>
+<text class="muted" x="796.8" y="50">shellmate/together/deepseek-ai/DeepSeek-V4.1-Flash-1017</text>
+<rect class="s3" x="1179.8" y="40" width="12" height="12" rx="3"/>
+<text class="muted" x="1197.8" y="50">shellmate/together/thinkingmachines/Inkling</text>
+<rect class="s4" x="1501.6" y="40" width="12" height="12" rx="3"/>
+<text class="muted" x="1519.6" y="50">shellmate/together/zai-org/GLM-5.3</text>
 <line class="axis" x1="56" x2="550" y1="352.0" y2="352.0"/>
 <text class="muted" x="46" y="356.0" text-anchor="end">0.00</text>
 <line class="grid" x1="56" x2="550" y1="280.0" y2="280.0"/>
@@ -25,23 +25,22 @@
 <text class="muted" x="56.0" y="372" text-anchor="middle">1</text>
 <text class="muted" x="550.0" y="372" text-anchor="middle">2</text>
 <text class="muted" x="303.0" y="392" text-anchor="middle">k: attempts drawn that must all pass</text>
-<path class="s0" d="M56.0,352.0 L550.0,352.0" fill="none" stroke-width="2" stroke-linejoin="round" style="fill:none"/>
-<circle class="s0 mark" cx="56.0" cy="352.0" r="4.5"><title>shellmate/ollama/mimo-v2.6:9b-q4_K_M: pass^1 = 0.00</title></circle>
-<circle class="s0 mark" cx="550.0" cy="352.0" r="4.5"><title>shellmate/ollama/mimo-v2.6:9b-q4_K_M: pass^2 = 0.00</title></circle>
-<path class="s1" d="M56.0,332.8 L550.0,332.8" fill="none" stroke-width="2" stroke-linejoin="round" style="fill:none"/>
-<circle class="s1 mark" cx="56.0" cy="332.8" r="4.5"><title>shellmate/ollama/ornith-1.5:9b: pass^1 = 0.07</title></circle>
-<circle class="s1 mark" cx="550.0" cy="332.8" r="4.5"><title>shellmate/ollama/ornith-1.5:9b: pass^2 = 0.07</title></circle>
-<path class="s2" d="M56.0,352.0 L550.0,352.0" fill="none" stroke-width="2" stroke-linejoin="round" style="fill:none"/>
-<circle class="s2 mark" cx="56.0" cy="352.0" r="4.5"><title>shellmate/ollama/qwen3.5:4b: pass^1 = 0.00</title></circle>
-<circle class="s2 mark" cx="550.0" cy="352.0" r="4.5"><title>shellmate/ollama/qwen3.5:4b: pass^2 = 0.00</title></circle>
-<path class="s3" d="M56.0,352.0 L550.0,352.0" fill="none" stroke-width="2" stroke-linejoin="round" style="fill:none"/>
-<circle class="s3 mark" cx="56.0" cy="352.0" r="4.5"><title>shellmate/ollama/qwen3.5:9b: pass^1 = 0.00</title></circle>
-<circle class="s3 mark" cx="550.0" cy="352.0" r="4.5"><title>shellmate/ollama/qwen3.5:9b: pass^2 = 0.00</title></circle>
-<path class="s4" d="M56.0,121.6" fill="none" stroke-width="2" stroke-linejoin="round" style="fill:none"/>
-<circle class="s4 mark" cx="56.0" cy="121.6" r="4.5"><title>shellmate/together/thinkingmachines/Inkling: pass^1 = 0.80</title></circle>
+<path class="s0" d="M56.0,64.0 L550.0,64.0" fill="none" stroke-width="2" stroke-linejoin="round" style="fill:none"/>
+<circle class="s0 mark" cx="56.0" cy="64.0" r="4.5"><title>shellmate/together/MiniMaxAI/MiniMax-M3.1-Flash: pass^1 = 1.00</title></circle>
+<circle class="s0 mark" cx="550.0" cy="64.0" r="4.5"><title>shellmate/together/MiniMaxAI/MiniMax-M3.1-Flash: pass^2 = 1.00</title></circle>
+<path class="s1" d="M56.0,83.2" fill="none" stroke-width="2" stroke-linejoin="round" style="fill:none"/>
+<circle class="s1 mark" cx="56.0" cy="83.2" r="4.5"><title>shellmate/together/deepseek-ai/DeepSeek-V4-Pro-0813: pass^1 = 0.93</title></circle>
+<path class="s2" d="M56.0,64.0 L550.0,64.0" fill="none" stroke-width="2" stroke-linejoin="round" style="fill:none"/>
+<circle class="s2 mark" cx="56.0" cy="64.0" r="4.5"><title>shellmate/together/deepseek-ai/DeepSeek-V4.1-Flash-1017: pass^1 = 1.00</title></circle>
+<circle class="s2 mark" cx="550.0" cy="64.0" r="4.5"><title>shellmate/together/deepseek-ai/DeepSeek-V4.1-Flash-1017: pass^2 = 1.00</title></circle>
+<path class="s3" d="M56.0,121.6" fill="none" stroke-width="2" stroke-linejoin="round" style="fill:none"/>
+<circle class="s3 mark" cx="56.0" cy="121.6" r="4.5"><title>shellmate/together/thinkingmachines/Inkling: pass^1 = 0.80</title></circle>
+<path class="s4" d="M56.0,131.2 L550.0,160.0" fill="none" stroke-width="2" stroke-linejoin="round" style="fill:none"/>
+<circle class="s4 mark" cx="56.0" cy="131.2" r="4.5"><title>shellmate/together/zai-org/GLM-5.3: pass^1 = 0.77</title></circle>
+<circle class="s4 mark" cx="550.0" cy="160.0" r="4.5"><title>shellmate/together/zai-org/GLM-5.3: pass^2 = 0.67</title></circle>
+<text class="ink" x="562.0" y="68.0">DeepSeek-V4.1-Flash-1017 1.00</text>
+<text class="ink" x="562.0" y="84.0">MiniMax-M3.1-Flash 1.00</text>
+<text class="ink" x="68.0" y="100.0">DeepSeek-V4-Pro-0813 0.93</text>
 <text class="ink" x="68.0" y="125.6">Inkling 0.80</text>
-<text class="ink" x="562.0" y="336.8">ornith-1.5:9b 0.07</text>
-<text class="ink" x="562.0" y="356.0">mimo-v2.6:9b-q4_K_M 0.00</text>
-<text class="ink" x="562.0" y="372.0">qwen3.5:4b 0.00</text>
-<text class="ink" x="562.0" y="388.0">qwen3.5:9b 0.00</text>
+<text class="ink" x="562.0" y="164.0">GLM-5.3 0.67</text>
 </svg>

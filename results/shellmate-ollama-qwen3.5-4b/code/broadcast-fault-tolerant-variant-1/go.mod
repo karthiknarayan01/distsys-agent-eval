@@ -1,9 +1,0 @@
-module node
-
-go 1.27
-
-require github.com/jepsen-io/maelstrom/demo/go v0.0.0-20260710121306-480a8197026d
-
-require (
-	github.com/gorilla/websocket v1.5.0 // indirect
-)
