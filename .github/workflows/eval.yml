@@ -5,10 +5,13 @@
 # What runs comes from .github/eval-matrix.json: each model, with its provider, and the tasks
 # and attempts per task (a model can override both). Each model x task is its own job, so no
 # job comes near the 6-hour limit. Ollama models run on the runner's CPU; "together" models are
-# called on Together AI with the TOGETHER_API_KEY secret.
+# called on Together AI with the TOGETHER_API_KEY secret. "include_runs" lists earlier runs of
+# this workflow whose results are merged in first, so a run can re-do only some tasks.
 #
-# Every job uploads its results/ (results.jsonl, transcripts, code). The report job merges them
-# into one results/<agent>/ per model and writes report.txt, report.json and pass-k.svg.
+# Every job uploads its results/ (results.jsonl, transcripts, code, Maelstrom's output) as one
+# tarball. The report job merges them into one results/<agent>/ per model, writes report.txt,
+# report.json and pass-k.svg, uploads it all, and pushes it (without Maelstrom's output) to the
+# branch eval-results-<run id>.
 name: eval
 
 on:
@@ -90,20 +93,28 @@ jobs:
               "${{ matrix.task }}" | tee "$RUNNER_TEMP/run.log"
             tail -n 1 "$RUNNER_TEMP/run.log" | grep -q " 0 errors" && break
           done
-      - name: Keep Ollama's log with the results
-        if: always() && matrix.provider == 'ollama'
-        run: mkdir -p results && cp "$RUNNER_TEMP/ollama.log" "results/ollama-${{ matrix.slug }}.log" || true
+      - name: Pack the results, with Ollama's log
+        if: always()
+        run: |
+          mkdir -p results
+          if [ -f "$RUNNER_TEMP/ollama.log" ]; then cp "$RUNNER_TEMP/ollama.log" "results/ollama-${{ matrix.slug }}.log"; fi
+          # A tarball, since Maelstrom names some files with characters artifacts don't allow.
+          tar czf results.tgz results
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: results-${{ matrix.slug }}
-          path: results/
-          if-no-files-found: warn
+          path: results.tgz
 
   report:
     needs: run
     if: always() && needs.run.result != 'skipped'
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -112,30 +123,37 @@ jobs:
           cache: pip
       - name: Install
         run: pip install -e .
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: results-*
-          path: downloaded
-      - name: Merge every job's results, one directory per model
+      - name: Download every job's results, earlier runs first
         run: |
-          mkdir -p results/logs
-          for job in downloaded/*/; do
-            cp "$job"ollama-*.log results/logs/ 2>/dev/null || true
-            for agent in "$job"*/; do
-              [ -f "$agent/results.jsonl" ] || continue
-              name="$(basename "$agent")"
-              mkdir -p "results/$name"
-              rsync -a --exclude results.jsonl "$agent" "results/$name/"
-              cat "$agent/results.jsonl" >> "results/$name/results.jsonl"
-            done
+          i=0
+          for id in $(jq -r '.include_runs // [] | .[]' .github/eval-matrix.json) "$GITHUB_RUN_ID"; do
+            i=$((i + 1))
+            gh run download "$id" --repo "$GITHUB_REPOSITORY" --pattern 'results-*' --dir "downloaded/$i-$id"
+            rm -rf "downloaded/$i-$id/results-all"
           done
+      - name: Merge them, one directory per model
+        run: |
+          jobs=$(for run in $(ls downloaded | sort -n); do ls -d "downloaded/$run"/*/; done)
+          python -m distsys_eval.merge results $jobs
       - name: Report
         run: |
           dirs=$(ls -d results/*/ | grep -v '/logs/$')
           distsys-eval report $dirs --chart results/pass-k.svg | tee results/report.txt
           distsys-eval report $dirs --json > results/report.json
           { echo '```'; cat results/report.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Pack everything
+        run: tar czf results.tgz results
       - uses: actions/upload-artifact@v4
         with:
           name: results-all
-          path: results/
+          path: results.tgz
+      - name: Push the results to a branch
+        run: |
+          branch="eval-results-$GITHUB_RUN_ID"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan "$branch"
+          git rm -rq --cached .
+          git add -f results ':(exclude,glob)results/*/code/*/store/**'
+          git commit -qm "Eval results from run $GITHUB_RUN_ID"
+          git push origin "HEAD:refs/heads/$branch"

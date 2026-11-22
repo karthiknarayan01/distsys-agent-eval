@@ -1,7 +1,11 @@
 {
   "attempts": 2,
   "tasks": [],
+  "include_runs": [44963448839, 44971783351],
   "models": [
-    {"provider": "together", "model": "thinkingmachines/Inkling"}
+    {"provider": "ollama", "model": "qwen3.5:9b", "tasks": ["broadcast-fault-tolerant-variant", "unique-ids"]},
+    {"provider": "ollama", "model": "ornith-1.5:9b", "tasks": ["broadcast-multi-node"]},
+    {"provider": "together", "model": "thinkingmachines/Inkling",
+     "tasks": ["kafka-multi-node", "kafka-multi-node-variant", "kafka-single-node"]}
   ]
 }
