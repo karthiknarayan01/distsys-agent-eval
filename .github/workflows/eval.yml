@@ -153,7 +153,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout --orphan "$branch"
-          git rm -rq --cached .
+          git rm -rqf --cached .
           git add -f results ':(exclude,glob)results/*/code/*/store/**'
           git commit -qm "Eval results from run $GITHUB_RUN_ID"
           git push origin "HEAD:refs/heads/$branch"
