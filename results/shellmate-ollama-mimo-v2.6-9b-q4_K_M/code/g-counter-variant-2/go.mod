@@ -1,0 +1,6 @@
+module node
+
+go 1.27.4
+
+require github.com/jepsn-io/maelstrom/demo/go v0.0.0-20260710121306-480a8197026d
+replace github.com/jepsn-io/maelstrom => github.com/jepsn-io/maelstrom v0.2.4
