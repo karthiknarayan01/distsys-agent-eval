@@ -9,7 +9,7 @@ import time
 
 import pytest
 
-from distsys_eval.sandbox import Sandbox, SandboxConfig
+from distsys_eval.sandbox import Sandbox, SandboxConfig, SandboxError
 
 IMAGE = os.environ.get("SANDBOX_TEST_IMAGE")
 pytestmark = [
@@ -48,6 +48,11 @@ async def test_files_round_trip(tmp_path):
         assert await box.read_file("notes/plan.txt") == b"one\ntwo\n"
         with pytest.raises(FileNotFoundError):
             await box.read_file("missing.txt")
+        await box.write_file("/tmp/top.txt", "top")
+        assert await box.read_file("/tmp/top.txt") == b"top"
+        with pytest.raises(OSError, match="plan.txt/inner") as raised:
+            await box.write_file("notes/plan.txt/inner", "x")  # plan.txt is a file, not a directory
+        assert not isinstance(raised.value, SandboxError)
         await box.copy_in(tmp_path, "project")
         assert (await box.exec("cat project/src/main.go", timeout=10)).output == "package main\n"
         await box.copy_out("project", tmp_path / "back")

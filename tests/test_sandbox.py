@@ -5,7 +5,16 @@ import asyncio
 
 import pytest
 
-from distsys_eval.sandbox import TIMED_OUT, DockerResult, Sandbox, SandboxConfig, SandboxError, read_capped
+from distsys_eval.sandbox import (
+    DOCKER_FAILED,
+    TIMED_OUT,
+    WRITE_FAILED,
+    DockerResult,
+    Sandbox,
+    SandboxConfig,
+    SandboxError,
+    read_capped,
+)
 from tests.fake_docker import FakeDocker, failed
 
 
@@ -105,6 +114,22 @@ async def test_a_file_is_written_through_stdin():
         await box.write_file("src/main.go", "package main\n")
     args, stdin = docker.calls[1]
     assert args[-1] == "src/main.go" and stdin == b"package main\n"
+
+
+async def test_a_path_the_agent_cant_write_is_its_own_error():
+    docker = FakeDocker({"exec": failed("sh: can't create /main.go: Permission denied", WRITE_FAILED)})
+    async with Sandbox.start(SandboxConfig(), docker) as box:
+        with pytest.raises(OSError, match="Permission denied") as raised:
+            await box.write_file("/main.go", "package main\n")
+    assert not isinstance(raised.value, SandboxError)
+
+
+async def test_docker_failing_to_write_is_a_sandbox_error():
+    gone = failed("Error response from daemon: container is not running", DOCKER_FAILED)
+    docker = FakeDocker({"exec": gone})
+    async with Sandbox.start(SandboxConfig(), docker) as box:
+        with pytest.raises(SandboxError, match="not running"):
+            await box.write_file("main.go", "package main\n")
 
 
 async def test_reading_a_missing_file():

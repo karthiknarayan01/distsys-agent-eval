@@ -1,0 +1,10 @@
+{
+  "attempts": 2,
+  "tasks": [],
+  "models": [
+    {"provider": "together", "model": "deepseek-ai/DeepSeek-V4-Pro-0813"},
+    {"provider": "together", "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017"},
+    {"provider": "together", "model": "zai-org/GLM-5.3"},
+    {"provider": "together", "model": "MiniMaxAI/MiniMax-M3.1-Flash"}
+  ]
+}

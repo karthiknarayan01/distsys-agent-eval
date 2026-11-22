@@ -38,6 +38,11 @@ KILL_GRACE_SECONDS = 5  # after a timeout, how long a command gets to exit befor
 DOCKER_TIMEOUT_SECONDS = 120  # for docker's own calls: starting, copying, removing
 TIMED_OUT = 124  # the exit status `timeout` gives a command it had to stop
 DOCKER_FAILED = 125  # the exit status `docker exec` gives when docker itself failed
+WRITE_FAILED = 3  # the exit status WRITE_SCRIPT gives when the path can't be written
+# Creates the file's directory unless it has none ("main.go") or it is the root ("/main.go").
+WRITE_SCRIPT = (
+    'd="${1%/*}"; if [ -n "$d" ] && [ "$d" != "$1" ]; then mkdir -p "$d" || exit 3; fi; cat > "$1" || exit 3'
+)
 
 
 class SandboxError(RuntimeError):
@@ -116,13 +121,17 @@ class Sandbox:
         return ExecResult(ran.exit_code, ran.stdout, ran.exit_code == TIMED_OUT, ran.truncated)
 
     async def write_file(self, path: str, content: str | bytes) -> None:
-        """Write a file, creating its directories; a relative path is under the working directory."""
+        """Write a file, creating its directories; a relative path is under the working directory.
+        Raises OSError if the path can't be written (say, no permission), which the agent sees and
+        can fix; SandboxError only if docker itself failed."""
         data = content.encode() if isinstance(content, str) else content
         wrote = await self._docker.run(
             "exec", "--interactive", "--workdir", self.config.workdir, self.container_id,
-            "sh", "-c", 'd="${1%/*}"; if [ "$d" != "$1" ]; then mkdir -p "$d"; fi; cat > "$1"', "sh", path,
+            "sh", "-c", WRITE_SCRIPT, "sh", path,
             stdin=data,
         )
+        if wrote.exit_code == WRITE_FAILED:
+            raise OSError(f"couldn't write {path}: {wrote.error}")
         if wrote.exit_code != 0:
             raise SandboxError(f"couldn't write {path}: {wrote.error}")
 
