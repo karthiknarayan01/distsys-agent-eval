@@ -8,6 +8,10 @@
 # called on Together AI with the TOGETHER_API_KEY secret. "include_runs" lists earlier runs of
 # this workflow whose results are merged in first, so a run can re-do only some tasks.
 #
+# A model can also set "env" (say AGENT_MAX_OUTPUT_TOKENS, the limit on one reply), "seed" (a
+# committed results directory to carry on from), "out" (the directory its results go to) and
+# "redo" (stop reasons whose attempts are run again, as in `distsys-eval run --redo`).
+#
 # Every job uploads its results/ (results.jsonl, transcripts, code, Maelstrom's output) as one
 # tarball. The report job merges them into one results/<agent>/ per model, writes report.txt,
 # report.json and pass-k.svg, uploads it all, and pushes it (without Maelstrom's output) to the
@@ -42,7 +46,9 @@ jobs:
               for task in m.get("tasks") or config.get("tasks") or every_task:
                   slug = f"{m['model']}-{task}".replace("/", "-").replace(":", "-")
                   jobs.append({"provider": m["provider"], "model": m["model"], "task": task,
-                               "attempts": m.get("attempts", config["attempts"]), "slug": slug})
+                               "attempts": m.get("attempts", config["attempts"]), "slug": slug,
+                               "env": m.get("env", {}), "seed": m.get("seed", ""), "out": m.get("out", ""),
+                               "redo": " ".join(f"--redo {r}" for r in m.get("redo", []))})
           print(f"{len(jobs)} jobs")
           with open(os.environ["GITHUB_OUTPUT"], "a") as out:
               out.write(f"matrix={json.dumps({'include': jobs})}\n")
@@ -85,12 +91,29 @@ jobs:
       - name: Run the attempts
         env:
           TOGETHER_API_KEY: ${{ secrets.TOGETHER_API_KEY }}
+          MATRIX_ENV: ${{ toJson(matrix.env) }}
         run: |
-          # Attempts the harness let down are errors; running again retries only those.
+          eval "$(jq -r 'to_entries[] | "export \(.key)=\(.value | tostring | @sh)"' <<< "$MATRIX_ENV")"
+          # Committed results stay out of this job's upload; a seed is carried on from, this task only.
+          out=()
+          if [ -n "${{ matrix.out }}" ]; then out=(--out "results/${{ matrix.out }}"); fi
+          seed="${{ matrix.seed }}"
+          if [ -n "$seed" ]; then cp -r "$seed" "$RUNNER_TEMP/seed"; fi
+          rm -rf results
+          if [ -n "$seed" ]; then
+            mkdir -p "results/${{ matrix.out }}"
+            cp -r "$RUNNER_TEMP/seed/." "results/${{ matrix.out }}/"
+            jq -c --arg task "${{ matrix.task }}" 'select(.task == $task)' "$RUNNER_TEMP/seed/results.jsonl" \
+              > "results/${{ matrix.out }}/results.jsonl"
+          fi
+          # Attempts the harness let down are errors; running again retries only those. A redo
+          # applies to the first pass only, so each attempt it names is run again once.
+          redo="${{ matrix.redo }}"
           for pass in 1 2 3; do
             distsys-eval run --provider "${{ matrix.provider }}" --model "${{ matrix.model }}" \
-              --attempts "${{ matrix.attempts }}" --image distsys-agent-eval/sandbox:ci \
+              --attempts "${{ matrix.attempts }}" --image distsys-agent-eval/sandbox:ci "${out[@]}" $redo \
               "${{ matrix.task }}" | tee "$RUNNER_TEMP/run.log"
+            redo=""
             tail -n 1 "$RUNNER_TEMP/run.log" | grep -q " 0 errors" && break
           done
       - name: Pack the results, with Ollama's log
