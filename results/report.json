@@ -1,0 +1,1690 @@
+[
+  {
+    "agent": "shellmate/together/MiniMaxAI/MiniMax-M3.1-Flash",
+    "overall": {
+      "pass_hat": {},
+      "failures": {}
+    },
+    "variants": [
+      {
+        "original": "broadcast-fault-tolerant",
+        "variant": "broadcast-fault-tolerant-variant"
+      },
+      {
+        "original": "g-counter",
+        "variant": "g-counter-variant"
+      },
+      {
+        "original": "unique-ids",
+        "variant": "unique-ids-variant"
+      }
+    ],
+    "tasks": [
+      {
+        "task": "broadcast-fault-tolerant",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 21,
+        "mean_minutes": 3.4833333333333334,
+        "input_tokens": 1192966,
+        "output_tokens": 18205
+      },
+      {
+        "task": "broadcast-fault-tolerant-variant",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 17,
+        "mean_minutes": 3.1641666666666666,
+        "input_tokens": 1440764,
+        "output_tokens": 18018
+      },
+      {
+        "task": "broadcast-few-messages",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 18.5,
+        "mean_minutes": 3.355833333333334,
+        "input_tokens": 1227792,
+        "output_tokens": 18667
+      },
+      {
+        "task": "broadcast-low-latency",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 18.5,
+        "mean_minutes": 2.7449999999999997,
+        "input_tokens": 1046271,
+        "output_tokens": 12701
+      },
+      {
+        "task": "broadcast-multi-node",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 26.5,
+        "mean_minutes": 8.040833333333333,
+        "input_tokens": 1744377,
+        "output_tokens": 39918
+      },
+      {
+        "task": "broadcast-single-node",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 15,
+        "mean_minutes": 2.510833333333333,
+        "input_tokens": 463035,
+        "output_tokens": 9190
+      },
+      {
+        "task": "echo",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 10,
+        "mean_minutes": 1.6224999999999998,
+        "input_tokens": 153479,
+        "output_tokens": 6954
+      },
+      {
+        "task": "g-counter",
+        "attempts": 0,
+        "passed": 0,
+        "errors": 2,
+        "pass_hat": {},
+        "failures": {},
+        "mean_steps": 0.0,
+        "mean_minutes": 0.0,
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      {
+        "task": "g-counter-variant",
+        "attempts": 0,
+        "passed": 0,
+        "errors": 2,
+        "pass_hat": {},
+        "failures": {},
+        "mean_steps": 0.0,
+        "mean_minutes": 0.0,
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      {
+        "task": "txn-read-committed",
+        "attempts": 0,
+        "passed": 0,
+        "errors": 2,
+        "pass_hat": {},
+        "failures": {},
+        "mean_steps": 0.0,
+        "mean_minutes": 0.0,
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      {
+        "task": "unique-ids",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 20.5,
+        "mean_minutes": 3.074166666666667,
+        "input_tokens": 685863,
+        "output_tokens": 21082
+      },
+      {
+        "task": "unique-ids-variant",
+        "attempts": 0,
+        "passed": 0,
+        "errors": 2,
+        "pass_hat": {},
+        "failures": {},
+        "mean_steps": 0.0,
+        "mean_minutes": 0.0,
+        "input_tokens": 0,
+        "output_tokens": 0
+      }
+    ]
+  },
+  {
+    "agent": "shellmate/together/MiniMaxAI/MiniMax-M3.1-Flash",
+    "overall": {
+      "pass_hat": {
+        "1": 1.0,
+        "2": 1.0
+      },
+      "failures": {}
+    },
+    "variants": [
+      {
+        "original": "broadcast-fault-tolerant",
+        "variant": "broadcast-fault-tolerant-variant"
+      },
+      {
+        "original": "g-counter",
+        "variant": "g-counter-variant"
+      },
+      {
+        "original": "kafka-multi-node",
+        "variant": "kafka-multi-node-variant"
+      },
+      {
+        "original": "unique-ids",
+        "variant": "unique-ids-variant"
+      }
+    ],
+    "tasks": [
+      {
+        "task": "broadcast-fault-tolerant",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 16,
+        "mean_minutes": 3.5908333333333333,
+        "input_tokens": 993682,
+        "output_tokens": 20882
+      },
+      {
+        "task": "broadcast-fault-tolerant-variant",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 16,
+        "mean_minutes": 3.6300000000000003,
+        "input_tokens": 1315198,
+        "output_tokens": 25859
+      },
+      {
+        "task": "broadcast-few-messages",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 12,
+        "mean_minutes": 2.8433333333333333,
+        "input_tokens": 651179,
+        "output_tokens": 16495
+      },
+      {
+        "task": "broadcast-low-latency",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 19,
+        "mean_minutes": 3.0341666666666667,
+        "input_tokens": 1256219,
+        "output_tokens": 14780
+      },
+      {
+        "task": "broadcast-multi-node",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 13,
+        "mean_minutes": 4.366666666666666,
+        "input_tokens": 731788,
+        "output_tokens": 14203
+      },
+      {
+        "task": "broadcast-single-node",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 18.5,
+        "mean_minutes": 2.8225000000000002,
+        "input_tokens": 860515,
+        "output_tokens": 10923
+      },
+      {
+        "task": "echo",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 7.5,
+        "mean_minutes": 0.7408333333333333,
+        "input_tokens": 85428,
+        "output_tokens": 3698
+      },
+      {
+        "task": "g-counter",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 21.5,
+        "mean_minutes": 4.405,
+        "input_tokens": 1159410,
+        "output_tokens": 20839
+      },
+      {
+        "task": "g-counter-variant",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 35.5,
+        "mean_minutes": 9.34,
+        "input_tokens": 3981209,
+        "output_tokens": 76092
+      },
+      {
+        "task": "kafka-multi-node",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 98,
+        "mean_minutes": 20.769166666666667,
+        "input_tokens": 11783221,
+        "output_tokens": 125612
+      },
+      {
+        "task": "kafka-multi-node-variant",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 35.5,
+        "mean_minutes": 13.2875,
+        "input_tokens": 3428333,
+        "output_tokens": 48541
+      },
+      {
+        "task": "kafka-single-node",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 73.5,
+        "mean_minutes": 16.285833333333336,
+        "input_tokens": 9153058,
+        "output_tokens": 118134
+      },
+      {
+        "task": "txn-read-committed",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 24,
+        "mean_minutes": 3.6041666666666665,
+        "input_tokens": 2033231,
+        "output_tokens": 35086
+      },
+      {
+        "task": "unique-ids",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 10,
+        "mean_minutes": 1.3358333333333334,
+        "input_tokens": 359337,
+        "output_tokens": 9211
+      },
+      {
+        "task": "unique-ids-variant",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 17,
+        "mean_minutes": 2.2475,
+        "input_tokens": 618928,
+        "output_tokens": 14180
+      }
+    ]
+  },
+  {
+    "agent": "shellmate/together/deepseek-ai/DeepSeek-V4-Pro-0813",
+    "overall": {
+      "pass_hat": {
+        "1": 0.9333333333333333
+      },
+      "failures": {
+        "truncated": 2
+      }
+    },
+    "variants": [
+      {
+        "original": "broadcast-fault-tolerant",
+        "variant": "broadcast-fault-tolerant-variant"
+      },
+      {
+        "original": "g-counter",
+        "variant": "g-counter-variant"
+      },
+      {
+        "original": "kafka-multi-node",
+        "variant": "kafka-multi-node-variant"
+      },
+      {
+        "original": "unique-ids",
+        "variant": "unique-ids-variant"
+      }
+    ],
+    "tasks": [
+      {
+        "task": "broadcast-fault-tolerant",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 7.5,
+        "mean_minutes": 3.3308333333333335,
+        "input_tokens": 101535,
+        "output_tokens": 10649
+      },
+      {
+        "task": "broadcast-fault-tolerant-variant",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 13,
+        "mean_minutes": 4.764166666666667,
+        "input_tokens": 372217,
+        "output_tokens": 17868
+      },
+      {
+        "task": "broadcast-few-messages",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 24,
+        "mean_minutes": 6.501666666666667,
+        "input_tokens": 1128575,
+        "output_tokens": 49172
+      },
+      {
+        "task": "broadcast-low-latency",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 7,
+        "mean_minutes": 2.5241666666666664,
+        "input_tokens": 126829,
+        "output_tokens": 15981
+      },
+      {
+        "task": "broadcast-multi-node",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 8,
+        "mean_minutes": 2.9791666666666665,
+        "input_tokens": 66848,
+        "output_tokens": 3689
+      },
+      {
+        "task": "broadcast-single-node",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 4,
+        "mean_minutes": 0.7975,
+        "input_tokens": 28905,
+        "output_tokens": 1484
+      },
+      {
+        "task": "echo",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 4,
+        "mean_minutes": 0.5058333333333334,
+        "input_tokens": 26605,
+        "output_tokens": 998
+      },
+      {
+        "task": "g-counter",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 37.5,
+        "mean_minutes": 10.328333333333335,
+        "input_tokens": 2351296,
+        "output_tokens": 85320
+      },
+      {
+        "task": "g-counter-variant",
+        "attempts": 2,
+        "passed": 1,
+        "errors": 0,
+        "pass_hat": {
+          "1": 0.5,
+          "2": 0.0
+        },
+        "failures": {
+          "truncated": 1
+        },
+        "mean_steps": 12.5,
+        "mean_minutes": 4.5183333333333335,
+        "input_tokens": 662124,
+        "output_tokens": 20583
+      },
+      {
+        "task": "kafka-multi-node",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 32.5,
+        "mean_minutes": 18.3125,
+        "input_tokens": 2792094,
+        "output_tokens": 75663
+      },
+      {
+        "task": "kafka-multi-node-variant",
+        "attempts": 1,
+        "passed": 1,
+        "errors": 1,
+        "pass_hat": {
+          "1": 1.0
+        },
+        "failures": {},
+        "mean_steps": 100,
+        "mean_minutes": 26.82,
+        "input_tokens": 6078967,
+        "output_tokens": 92220
+      },
+      {
+        "task": "kafka-single-node",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 97.5,
+        "mean_minutes": 25.293333333333333,
+        "input_tokens": 9816090,
+        "output_tokens": 167374
+      },
+      {
+        "task": "txn-read-committed",
+        "attempts": 2,
+        "passed": 1,
+        "errors": 0,
+        "pass_hat": {
+          "1": 0.5,
+          "2": 0.0
+        },
+        "failures": {
+          "truncated": 1
+        },
+        "mean_steps": 15,
+        "mean_minutes": 4.2625,
+        "input_tokens": 1184471,
+        "output_tokens": 34487
+      },
+      {
+        "task": "unique-ids",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 6.5,
+        "mean_minutes": 1.3900000000000001,
+        "input_tokens": 43229,
+        "output_tokens": 2914
+      },
+      {
+        "task": "unique-ids-variant",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 6.5,
+        "mean_minutes": 1.6166666666666667,
+        "input_tokens": 55140,
+        "output_tokens": 3898
+      }
+    ]
+  },
+  {
+    "agent": "shellmate/together/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "overall": {
+      "pass_hat": {},
+      "failures": {}
+    },
+    "variants": [
+      {
+        "original": "broadcast-fault-tolerant",
+        "variant": "broadcast-fault-tolerant-variant"
+      },
+      {
+        "original": "g-counter",
+        "variant": "g-counter-variant"
+      },
+      {
+        "original": "unique-ids",
+        "variant": "unique-ids-variant"
+      }
+    ],
+    "tasks": [
+      {
+        "task": "broadcast-fault-tolerant",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 12.5,
+        "mean_minutes": 4.1525,
+        "input_tokens": 202786,
+        "output_tokens": 16186
+      },
+      {
+        "task": "broadcast-fault-tolerant-variant",
+        "attempts": 1,
+        "passed": 1,
+        "errors": 1,
+        "pass_hat": {
+          "1": 1.0
+        },
+        "failures": {},
+        "mean_steps": 29,
+        "mean_minutes": 4.071666666666667,
+        "input_tokens": 769126,
+        "output_tokens": 17790
+      },
+      {
+        "task": "broadcast-few-messages",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 18.5,
+        "mean_minutes": 3.9208333333333334,
+        "input_tokens": 695867,
+        "output_tokens": 29392
+      },
+      {
+        "task": "broadcast-low-latency",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 16.5,
+        "mean_minutes": 2.4875,
+        "input_tokens": 320048,
+        "output_tokens": 12331
+      },
+      {
+        "task": "broadcast-multi-node",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 10,
+        "mean_minutes": 3.7741666666666664,
+        "input_tokens": 108663,
+        "output_tokens": 8911
+      },
+      {
+        "task": "broadcast-single-node",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 15,
+        "mean_minutes": 2.3258333333333336,
+        "input_tokens": 156768,
+        "output_tokens": 6903
+      },
+      {
+        "task": "echo",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 6.5,
+        "mean_minutes": 1.0875,
+        "input_tokens": 37813,
+        "output_tokens": 2769
+      },
+      {
+        "task": "g-counter",
+        "attempts": 0,
+        "passed": 0,
+        "errors": 2,
+        "pass_hat": {},
+        "failures": {},
+        "mean_steps": 0.0,
+        "mean_minutes": 0.0,
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      {
+        "task": "g-counter-variant",
+        "attempts": 0,
+        "passed": 0,
+        "errors": 2,
+        "pass_hat": {},
+        "failures": {},
+        "mean_steps": 0.0,
+        "mean_minutes": 0.0,
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      {
+        "task": "txn-read-committed",
+        "attempts": 0,
+        "passed": 0,
+        "errors": 2,
+        "pass_hat": {},
+        "failures": {},
+        "mean_steps": 0.0,
+        "mean_minutes": 0.0,
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      {
+        "task": "unique-ids",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 6,
+        "mean_minutes": 0.9358333333333333,
+        "input_tokens": 35269,
+        "output_tokens": 2845
+      },
+      {
+        "task": "unique-ids-variant",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 6.5,
+        "mean_minutes": 1.2491666666666668,
+        "input_tokens": 153921,
+        "output_tokens": 4336
+      }
+    ]
+  },
+  {
+    "agent": "shellmate/together/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "overall": {
+      "pass_hat": {
+        "1": 1.0,
+        "2": 1.0
+      },
+      "failures": {}
+    },
+    "variants": [
+      {
+        "original": "broadcast-fault-tolerant",
+        "variant": "broadcast-fault-tolerant-variant"
+      },
+      {
+        "original": "g-counter",
+        "variant": "g-counter-variant"
+      },
+      {
+        "original": "kafka-multi-node",
+        "variant": "kafka-multi-node-variant"
+      },
+      {
+        "original": "unique-ids",
+        "variant": "unique-ids-variant"
+      }
+    ],
+    "tasks": [
+      {
+        "task": "broadcast-fault-tolerant",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 9,
+        "mean_minutes": 3.021666666666667,
+        "input_tokens": 100583,
+        "output_tokens": 8824
+      },
+      {
+        "task": "broadcast-fault-tolerant-variant",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 23.5,
+        "mean_minutes": 6.545000000000001,
+        "input_tokens": 1495570,
+        "output_tokens": 35878
+      },
+      {
+        "task": "broadcast-few-messages",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 29.5,
+        "mean_minutes": 5.8100000000000005,
+        "input_tokens": 1680401,
+        "output_tokens": 57551
+      },
+      {
+        "task": "broadcast-low-latency",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 32.5,
+        "mean_minutes": 5.641666666666667,
+        "input_tokens": 2195019,
+        "output_tokens": 64873
+      },
+      {
+        "task": "broadcast-multi-node",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 18.5,
+        "mean_minutes": 5.060833333333333,
+        "input_tokens": 564645,
+        "output_tokens": 23531
+      },
+      {
+        "task": "broadcast-single-node",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 10.5,
+        "mean_minutes": 2.0925000000000002,
+        "input_tokens": 68773,
+        "output_tokens": 3913
+      },
+      {
+        "task": "echo",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 9.5,
+        "mean_minutes": 0.8441666666666667,
+        "input_tokens": 61866,
+        "output_tokens": 4070
+      },
+      {
+        "task": "g-counter",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 20,
+        "mean_minutes": 3.0733333333333333,
+        "input_tokens": 919808,
+        "output_tokens": 14089
+      },
+      {
+        "task": "g-counter-variant",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 40,
+        "mean_minutes": 7.198333333333333,
+        "input_tokens": 4222786,
+        "output_tokens": 76451
+      },
+      {
+        "task": "kafka-multi-node",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 76,
+        "mean_minutes": 15.8125,
+        "input_tokens": 8915546,
+        "output_tokens": 109724
+      },
+      {
+        "task": "kafka-multi-node-variant",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 100.5,
+        "mean_minutes": 22.586666666666666,
+        "input_tokens": 13078797,
+        "output_tokens": 174594
+      },
+      {
+        "task": "kafka-single-node",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 77,
+        "mean_minutes": 15.3575,
+        "input_tokens": 8123148,
+        "output_tokens": 118494
+      },
+      {
+        "task": "txn-read-committed",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 26.5,
+        "mean_minutes": 5.109166666666667,
+        "input_tokens": 1565449,
+        "output_tokens": 42782
+      },
+      {
+        "task": "unique-ids",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 9,
+        "mean_minutes": 2.256666666666667,
+        "input_tokens": 67308,
+        "output_tokens": 3883
+      },
+      {
+        "task": "unique-ids-variant",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 11,
+        "mean_minutes": 1.7066666666666668,
+        "input_tokens": 307713,
+        "output_tokens": 7770
+      }
+    ]
+  },
+  {
+    "agent": "shellmate/together/thinkingmachines/Inkling",
+    "overall": {
+      "pass_hat": {
+        "1": 0.8
+      },
+      "failures": {
+        "crashed": 2,
+        "fails-under-faults": 1,
+        "fails-without-faults": 1,
+        "doesnt-build": 1
+      }
+    },
+    "variants": [
+      {
+        "original": "broadcast-fault-tolerant",
+        "variant": "broadcast-fault-tolerant-variant"
+      },
+      {
+        "original": "g-counter",
+        "variant": "g-counter-variant"
+      },
+      {
+        "original": "kafka-multi-node",
+        "variant": "kafka-multi-node-variant"
+      },
+      {
+        "original": "unique-ids",
+        "variant": "unique-ids-variant"
+      }
+    ],
+    "tasks": [
+      {
+        "task": "broadcast-fault-tolerant",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 11,
+        "mean_minutes": 1.6800000000000002,
+        "input_tokens": 144061,
+        "output_tokens": 9070
+      },
+      {
+        "task": "broadcast-fault-tolerant-variant",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 33,
+        "mean_minutes": 3.4108333333333336,
+        "input_tokens": 1644311,
+        "output_tokens": 24032
+      },
+      {
+        "task": "broadcast-few-messages",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 22,
+        "mean_minutes": 3.51,
+        "input_tokens": 1059610,
+        "output_tokens": 32215
+      },
+      {
+        "task": "broadcast-low-latency",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 33.5,
+        "mean_minutes": 4.245,
+        "input_tokens": 1877618,
+        "output_tokens": 28372
+      },
+      {
+        "task": "broadcast-multi-node",
+        "attempts": 2,
+        "passed": 1,
+        "errors": 0,
+        "pass_hat": {
+          "1": 0.5,
+          "2": 0.0
+        },
+        "failures": {
+          "crashed": 1
+        },
+        "mean_steps": 14,
+        "mean_minutes": 1.5033333333333334,
+        "input_tokens": 302102,
+        "output_tokens": 5764
+      },
+      {
+        "task": "broadcast-single-node",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 10.5,
+        "mean_minutes": 1.3066666666666669,
+        "input_tokens": 105648,
+        "output_tokens": 2974
+      },
+      {
+        "task": "echo",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 9,
+        "mean_minutes": 0.5425,
+        "input_tokens": 72390,
+        "output_tokens": 1388
+      },
+      {
+        "task": "g-counter",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 27,
+        "mean_minutes": 2.6725,
+        "input_tokens": 1079488,
+        "output_tokens": 28761
+      },
+      {
+        "task": "g-counter-variant",
+        "attempts": 2,
+        "passed": 1,
+        "errors": 0,
+        "pass_hat": {
+          "1": 0.5,
+          "2": 0.0
+        },
+        "failures": {
+          "fails-under-faults": 1
+        },
+        "mean_steps": 38.5,
+        "mean_minutes": 6.1475,
+        "input_tokens": 2425480,
+        "output_tokens": 51598
+      },
+      {
+        "task": "kafka-multi-node",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 27.5,
+        "mean_minutes": 6.906666666666666,
+        "input_tokens": 1570206,
+        "output_tokens": 46469
+      },
+      {
+        "task": "kafka-multi-node-variant",
+        "attempts": 1,
+        "passed": 0,
+        "errors": 1,
+        "pass_hat": {
+          "1": 0.0
+        },
+        "failures": {
+          "crashed": 1
+        },
+        "mean_steps": 34,
+        "mean_minutes": 11.923333333333334,
+        "input_tokens": 898249,
+        "output_tokens": 17283
+      },
+      {
+        "task": "kafka-single-node",
+        "attempts": 2,
+        "passed": 1,
+        "errors": 0,
+        "pass_hat": {
+          "1": 0.5,
+          "2": 0.0
+        },
+        "failures": {
+          "fails-without-faults": 1
+        },
+        "mean_steps": 29.5,
+        "mean_minutes": 7.29,
+        "input_tokens": 1685747,
+        "output_tokens": 14945
+      },
+      {
+        "task": "txn-read-committed",
+        "attempts": 2,
+        "passed": 1,
+        "errors": 0,
+        "pass_hat": {
+          "1": 0.5,
+          "2": 0.0
+        },
+        "failures": {
+          "doesnt-build": 1
+        },
+        "mean_steps": 44,
+        "mean_minutes": 4.868333333333334,
+        "input_tokens": 5037759,
+        "output_tokens": 38340
+      },
+      {
+        "task": "unique-ids",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 14,
+        "mean_minutes": 0.9116666666666667,
+        "input_tokens": 174074,
+        "output_tokens": 5079
+      },
+      {
+        "task": "unique-ids-variant",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 17.5,
+        "mean_minutes": 1.4816666666666667,
+        "input_tokens": 408711,
+        "output_tokens": 9047
+      }
+    ]
+  },
+  {
+    "agent": "shellmate/together/zai-org/GLM-5.3",
+    "overall": {
+      "pass_hat": {
+        "1": 0.7666666666666667,
+        "2": 0.6666666666666666
+      },
+      "failures": {
+        "truncated": 7
+      }
+    },
+    "variants": [
+      {
+        "original": "broadcast-fault-tolerant",
+        "variant": "broadcast-fault-tolerant-variant"
+      },
+      {
+        "original": "g-counter",
+        "variant": "g-counter-variant"
+      },
+      {
+        "original": "kafka-multi-node",
+        "variant": "kafka-multi-node-variant"
+      },
+      {
+        "original": "unique-ids",
+        "variant": "unique-ids-variant"
+      }
+    ],
+    "tasks": [
+      {
+        "task": "broadcast-fault-tolerant",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 17.5,
+        "mean_minutes": 4.927499999999999,
+        "input_tokens": 532740,
+        "output_tokens": 28182
+      },
+      {
+        "task": "broadcast-fault-tolerant-variant",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 34,
+        "mean_minutes": 7.222499999999999,
+        "input_tokens": 3067572,
+        "output_tokens": 71348
+      },
+      {
+        "task": "broadcast-few-messages",
+        "attempts": 2,
+        "passed": 1,
+        "errors": 0,
+        "pass_hat": {
+          "1": 0.5,
+          "2": 0.0
+        },
+        "failures": {
+          "truncated": 1
+        },
+        "mean_steps": 14.5,
+        "mean_minutes": 5.221666666666667,
+        "input_tokens": 1116520,
+        "output_tokens": 41588
+      },
+      {
+        "task": "broadcast-low-latency",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 45,
+        "mean_minutes": 11.988333333333333,
+        "input_tokens": 4730417,
+        "output_tokens": 121711
+      },
+      {
+        "task": "broadcast-multi-node",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 30.5,
+        "mean_minutes": 9.577499999999999,
+        "input_tokens": 1742046,
+        "output_tokens": 49312
+      },
+      {
+        "task": "broadcast-single-node",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 11.5,
+        "mean_minutes": 2.443333333333334,
+        "input_tokens": 97063,
+        "output_tokens": 6612
+      },
+      {
+        "task": "echo",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 13.5,
+        "mean_minutes": 1.5891666666666666,
+        "input_tokens": 138681,
+        "output_tokens": 7900
+      },
+      {
+        "task": "g-counter",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 49,
+        "mean_minutes": 12.190833333333332,
+        "input_tokens": 3964974,
+        "output_tokens": 67288
+      },
+      {
+        "task": "g-counter-variant",
+        "attempts": 2,
+        "passed": 1,
+        "errors": 0,
+        "pass_hat": {
+          "1": 0.5,
+          "2": 0.0
+        },
+        "failures": {
+          "truncated": 1
+        },
+        "mean_steps": 14.5,
+        "mean_minutes": 7.340833333333333,
+        "input_tokens": 801996,
+        "output_tokens": 35758
+      },
+      {
+        "task": "kafka-multi-node",
+        "attempts": 2,
+        "passed": 0,
+        "errors": 0,
+        "pass_hat": {
+          "1": 0.0,
+          "2": 0.0
+        },
+        "failures": {
+          "truncated": 2
+        },
+        "mean_steps": 15.5,
+        "mean_minutes": 3.573333333333333,
+        "input_tokens": 1109721,
+        "output_tokens": 29401
+      },
+      {
+        "task": "kafka-multi-node-variant",
+        "attempts": 2,
+        "passed": 0,
+        "errors": 0,
+        "pass_hat": {
+          "1": 0.0,
+          "2": 0.0
+        },
+        "failures": {
+          "truncated": 2
+        },
+        "mean_steps": 0,
+        "mean_minutes": 1.7708333333333333,
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      {
+        "task": "kafka-single-node",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 92,
+        "mean_minutes": 22.489166666666666,
+        "input_tokens": 9772542,
+        "output_tokens": 231581
+      },
+      {
+        "task": "txn-read-committed",
+        "attempts": 2,
+        "passed": 1,
+        "errors": 0,
+        "pass_hat": {
+          "1": 0.5,
+          "2": 0.0
+        },
+        "failures": {
+          "truncated": 1
+        },
+        "mean_steps": 24.5,
+        "mean_minutes": 5.4799999999999995,
+        "input_tokens": 2331106,
+        "output_tokens": 53408
+      },
+      {
+        "task": "unique-ids",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 8,
+        "mean_minutes": 2.4916666666666667,
+        "input_tokens": 55402,
+        "output_tokens": 3795
+      },
+      {
+        "task": "unique-ids-variant",
+        "attempts": 2,
+        "passed": 2,
+        "errors": 0,
+        "pass_hat": {
+          "1": 1.0,
+          "2": 1.0
+        },
+        "failures": {},
+        "mean_steps": 17,
+        "mean_minutes": 3.515833333333333,
+        "input_tokens": 725420,
+        "output_tokens": 16730
+      }
+    ]
+  }
+]

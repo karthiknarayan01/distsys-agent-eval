@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 400" width="720" height="400" role="img" aria-label="Overall pass^k by agent">
+<style>svg{font:13px system-ui,-apple-system,'Segoe UI',sans-serif}.bg{fill:#fcfcfb}.ink{fill:#0b0b0b}.muted{fill:#52514e}.grid{stroke:#e4e3de;stroke-width:1}.axis{stroke:#a3a29c;stroke-width:1}.s0{stroke:#2a78d6;fill:#2a78d6}.s1{stroke:#eb6834;fill:#eb6834}.s2{stroke:#1baf7a;fill:#1baf7a}.s3{stroke:#eda100;fill:#eda100}.s4{stroke:#e87ba4;fill:#e87ba4}.s5{stroke:#008300;fill:#008300}.s6{stroke:#6250d6;fill:#6250d6}.mark{stroke:#fcfcfb;stroke-width:2}@media (prefers-color-scheme: dark){.bg{fill:#1a1a19}.ink{fill:#f0efec}.muted{fill:#c3c2b7}.grid{stroke:#33332f}.axis{stroke:#5f5e58}.s0{stroke:#3987e5;fill:#3987e5}.s1{stroke:#d95926;fill:#d95926}.s2{stroke:#199e70;fill:#199e70}.s3{stroke:#c98500;fill:#c98500}.s4{stroke:#d55181;fill:#d55181}.s5{stroke:#008300;fill:#008300}.s6{stroke:#9085e9;fill:#9085e9}.mark{stroke:#1a1a19}}</style>
+<rect class="bg" width="720" height="400" rx="8"/>
+<text class="ink" x="56" y="28" font-size="16" font-weight="600">Overall pass^k</text>
+<rect class="s0" x="56" y="40" width="12" height="12" rx="3"/>
+<text class="muted" x="74" y="50">shellmate/together/MiniMaxAI/MiniMax-M3.1-Flash</text>
+<rect class="s1" x="404.2" y="40" width="12" height="12" rx="3"/>
+<text class="muted" x="422.2" y="50">shellmate/together/MiniMaxAI/MiniMax-M3.1-Flash</text>
+<rect class="s2" x="752.4" y="40" width="12" height="12" rx="3"/>
+<text class="muted" x="770.4" y="50">shellmate/together/deepseek-ai/DeepSeek-V4-Pro-0813</text>
+<rect class="s3" x="1127.0" y="40" width="12" height="12" rx="3"/>
+<text class="muted" x="1145.0" y="50">shellmate/together/deepseek-ai/DeepSeek-V4.1-Flash-1017</text>
+<rect class="s4" x="1528.0" y="40" width="12" height="12" rx="3"/>
+<text class="muted" x="1546.0" y="50">shellmate/together/deepseek-ai/DeepSeek-V4.1-Flash-1017</text>
+<rect class="s5" x="1929.0" y="40" width="12" height="12" rx="3"/>
+<text class="muted" x="1947.0" y="50">shellmate/together/thinkingmachines/Inkling</text>
+<rect class="s6" x="2250.8" y="40" width="12" height="12" rx="3"/>
+<text class="muted" x="2268.8" y="50">shellmate/together/zai-org/GLM-5.3</text>
+<line class="axis" x1="56" x2="550" y1="352.0" y2="352.0"/>
+<text class="muted" x="46" y="356.0" text-anchor="end">0.00</text>
+<line class="grid" x1="56" x2="550" y1="280.0" y2="280.0"/>
+<text class="muted" x="46" y="284.0" text-anchor="end">0.25</text>
+<line class="grid" x1="56" x2="550" y1="208.0" y2="208.0"/>
+<text class="muted" x="46" y="212.0" text-anchor="end">0.50</text>
+<line class="grid" x1="56" x2="550" y1="136.0" y2="136.0"/>
+<text class="muted" x="46" y="140.0" text-anchor="end">0.75</text>
+<line class="grid" x1="56" x2="550" y1="64.0" y2="64.0"/>
+<text class="muted" x="46" y="68.0" text-anchor="end">1.00</text>
+<text class="muted" x="56.0" y="372" text-anchor="middle">1</text>
+<text class="muted" x="550.0" y="372" text-anchor="middle">2</text>
+<text class="muted" x="303.0" y="392" text-anchor="middle">k: attempts drawn that must all pass</text>
+
+<path class="s1" d="M56.0,64.0 L550.0,64.0" fill="none" stroke-width="2" stroke-linejoin="round" style="fill:none"/>
+<circle class="s1 mark" cx="56.0" cy="64.0" r="4.5"><title>shellmate/together/MiniMaxAI/MiniMax-M3.1-Flash: pass^1 = 1.00</title></circle>
+<circle class="s1 mark" cx="550.0" cy="64.0" r="4.5"><title>shellmate/together/MiniMaxAI/MiniMax-M3.1-Flash: pass^2 = 1.00</title></circle>
+<path class="s2" d="M56.0,83.2" fill="none" stroke-width="2" stroke-linejoin="round" style="fill:none"/>
+<circle class="s2 mark" cx="56.0" cy="83.2" r="4.5"><title>shellmate/together/deepseek-ai/DeepSeek-V4-Pro-0813: pass^1 = 0.93</title></circle>
+
+<path class="s4" d="M56.0,64.0 L550.0,64.0" fill="none" stroke-width="2" stroke-linejoin="round" style="fill:none"/>
+<circle class="s4 mark" cx="56.0" cy="64.0" r="4.5"><title>shellmate/together/deepseek-ai/DeepSeek-V4.1-Flash-1017: pass^1 = 1.00</title></circle>
+<circle class="s4 mark" cx="550.0" cy="64.0" r="4.5"><title>shellmate/together/deepseek-ai/DeepSeek-V4.1-Flash-1017: pass^2 = 1.00</title></circle>
+<path class="s5" d="M56.0,121.6" fill="none" stroke-width="2" stroke-linejoin="round" style="fill:none"/>
+<circle class="s5 mark" cx="56.0" cy="121.6" r="4.5"><title>shellmate/together/thinkingmachines/Inkling: pass^1 = 0.80</title></circle>
+<path class="s6" d="M56.0,131.2 L550.0,160.0" fill="none" stroke-width="2" stroke-linejoin="round" style="fill:none"/>
+<circle class="s6 mark" cx="56.0" cy="131.2" r="4.5"><title>shellmate/together/zai-org/GLM-5.3: pass^1 = 0.77</title></circle>
+<circle class="s6 mark" cx="550.0" cy="160.0" r="4.5"><title>shellmate/together/zai-org/GLM-5.3: pass^2 = 0.67</title></circle>
+<text class="ink" x="562.0" y="68.0">DeepSeek-V4.1-Flash-1017 1.00</text>
+<text class="ink" x="562.0" y="84.0">MiniMax-M3.1-Flash 1.00</text>
+<text class="ink" x="68.0" y="100.0">DeepSeek-V4-Pro-0813 0.93</text>
+<text class="ink" x="68.0" y="125.6">Inkling 0.80</text>
+<text class="ink" x="562.0" y="164.0">GLM-5.3 0.67</text>
+</svg>
