@@ -1,11 +1,10 @@
 {
-  "attempts": 2,
-  "tasks": [],
-  "include_runs": [44963448839, 44971783351],
+  "attempts": 1,
+  "tasks": ["broadcast-fault-tolerant"],
   "models": [
-    {"provider": "ollama", "model": "qwen3.5:9b", "tasks": ["broadcast-fault-tolerant-variant", "unique-ids"]},
-    {"provider": "ollama", "model": "ornith-1.5:9b", "tasks": ["broadcast-multi-node"]},
-    {"provider": "together", "model": "thinkingmachines/Inkling",
-     "tasks": ["kafka-multi-node", "kafka-multi-node-variant", "kafka-single-node"]}
+    {"provider": "together", "model": "deepseek-ai/DeepSeek-V4-Pro-0813"},
+    {"provider": "together", "model": "zai-org/GLM-5.3"},
+    {"provider": "together", "model": "Qwen/Qwen3.8-2.4T-A95B"},
+    {"provider": "together", "model": "openai/gpt-oss-120b"}
   ]
 }
