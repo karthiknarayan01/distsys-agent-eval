@@ -1,0 +1,154 @@
+shellmate/ollama/mimo-v2.6:9b-q4_K_M
+
+task                              passed  pass^1  pass^2  steps  minutes  tokens in / out
+broadcast-fault-tolerant          0/2     0.00    0.00    14     45.0     95k / 6k
+broadcast-fault-tolerant-variant  0/2     0.00    0.00    24     45.0     255k / 15k
+broadcast-few-messages            0/2     0.00    0.00    39     45.0     495k / 9k
+broadcast-low-latency             0/2     0.00    0.00    15     45.0     272k / 4k
+broadcast-multi-node              0/2     0.00    0.00    20     45.0     118k / 16k
+broadcast-single-node             0/2     0.00    0.00    36     30.0     359k / 11k
+echo                              0/2     0.00    0.00    28     15.0     175k / 7k
+g-counter                         0/2     0.00    0.00    22     45.0     173k / 16k
+g-counter-variant                 0/2     0.00    0.00    51     45.0     661k / 16k
+kafka-multi-node                  0/2     0.00    0.00    21     45.0     270k / 13k
+kafka-multi-node-variant          0/2     0.00    0.00    25     45.0     329k / 10k
+kafka-single-node                 0/2     0.00    0.00    29     45.0     438k / 9k
+txn-read-committed                0/2     0.00    0.00    14     60.0     225k / 3k
+unique-ids                        0/2     0.00    0.00    9      30.0     39k / 11k
+unique-ids-variant                0/2     0.00    0.00    0      30.0     0 / 0
+overall                                   0.00    0.00
+
+why attempts failed
+  out-of-time  30
+
+originals and their variants
+  original                  pass^1  variant                           pass^1  change
+  broadcast-fault-tolerant  0.00    broadcast-fault-tolerant-variant  0.00    +0.00
+  g-counter                 0.00    g-counter-variant                 0.00    +0.00
+  kafka-multi-node          0.00    kafka-multi-node-variant          0.00    +0.00
+  unique-ids                0.00    unique-ids-variant                0.00    +0.00
+
+shellmate/ollama/ornith-1.5:9b
+
+task                              passed  pass^1  pass^2  steps  minutes  tokens in / out
+broadcast-fault-tolerant          0/2     0.00    0.00    16     45.0     188k / 5k
+broadcast-fault-tolerant-variant  0/2     0.00    0.00    16     45.0     170k / 10k
+broadcast-few-messages            0/2     0.00    0.00    22     45.0     386k / 10k
+broadcast-low-latency             0/2     0.00    0.00    13     45.0     141k / 8k
+broadcast-multi-node              0/2     0.00    0.00    17     45.0     167k / 11k
+broadcast-single-node             0/2     0.00    0.00    20     30.0     218k / 8k
+echo                              2/2     1.00    1.00    10     14.8     92k / 5k
+g-counter                         0/2     0.00    0.00    22     45.0     337k / 17k
+g-counter-variant                 0/2     0.00    0.00    17     45.0     181k / 12k
+kafka-multi-node                  0/2     0.00    0.00    20     45.0     233k / 6k
+kafka-multi-node-variant          0/2     0.00    0.00    16     45.0     190k / 16k
+kafka-single-node                 0/2     0.00    0.00    15     45.0     222k / 8k
+txn-read-committed                0/2     0.00    0.00    18     60.0     286k / 4k
+unique-ids                        0/2     0.00    0.00    16     30.0     167k / 10k
+unique-ids-variant                0/2     0.00    0.00    14     30.0     110k / 15k
+overall                                   0.07    0.07
+
+why attempts failed
+  out-of-time  28
+
+originals and their variants
+  original                  pass^1  variant                           pass^1  change
+  broadcast-fault-tolerant  0.00    broadcast-fault-tolerant-variant  0.00    +0.00
+  g-counter                 0.00    g-counter-variant                 0.00    +0.00
+  kafka-multi-node          0.00    kafka-multi-node-variant          0.00    +0.00
+  unique-ids                0.00    unique-ids-variant                0.00    +0.00
+
+shellmate/ollama/qwen3.5:4b
+
+task                              passed  pass^1  pass^2  steps  minutes  tokens in / out
+broadcast-fault-tolerant          0/2     0.00    0.00    8      45.0     139k / 16k
+broadcast-fault-tolerant-variant  0/2     0.00    0.00    30     45.0     622k / 25k
+broadcast-few-messages            0/2     0.00    0.00    28     45.0     536k / 23k
+broadcast-low-latency             0/2     0.00    0.00    14     45.0     207k / 21k
+broadcast-multi-node              0/2     0.00    0.00    19     45.0     291k / 19k
+broadcast-single-node             0/2     0.00    0.00    26     30.0     342k / 17k
+echo                              0/2     0.00    0.00    16     15.0     99k / 6k
+g-counter                         0/2     0.00    0.00    23     45.0     343k / 20k
+g-counter-variant                 0/2     0.00    0.00    16     45.0     273k / 16k
+kafka-multi-node                  0/2     0.00    0.00    16     45.0     182k / 21k
+kafka-multi-node-variant          0/2     0.00    0.00    14     45.0     186k / 29k
+kafka-single-node                 0/2     0.00    0.00    17     45.0     327k / 25k
+txn-read-committed                0/2     0.00    0.00    16     33.5     326k / 11k
+unique-ids                        0/2     0.00    0.00    15     30.0     154k / 16k
+unique-ids-variant                0/2     0.00    0.00    38     30.0     671k / 25k
+overall                                   0.00    0.00
+
+why attempts failed
+  out-of-time   29
+  doesnt-build  1
+
+originals and their variants
+  original                  pass^1  variant                           pass^1  change
+  broadcast-fault-tolerant  0.00    broadcast-fault-tolerant-variant  0.00    +0.00
+  g-counter                 0.00    g-counter-variant                 0.00    +0.00
+  kafka-multi-node          0.00    kafka-multi-node-variant          0.00    +0.00
+  unique-ids                0.00    unique-ids-variant                0.00    +0.00
+
+shellmate/ollama/qwen3.5:9b
+
+task                              passed  pass^1  pass^2  steps  minutes  tokens in / out
+broadcast-fault-tolerant          0/2     0.00    0.00    7      45.0     41k / 14k
+broadcast-fault-tolerant-variant  0/2     0.00    0.00    6      45.0     38k / 13k
+broadcast-few-messages            0/2     0.00    0.00    19     45.0     269k / 29k
+broadcast-low-latency             0/2     0.00    0.00    12     30.8     137k / 13k
+broadcast-multi-node              0/2     0.00    0.00    14     45.0     198k / 25k
+broadcast-single-node             0/2     0.00    0.00    20     30.0     157k / 12k
+echo                              0/2     0.00    0.00    12     15.0     53k / 5k
+g-counter                         0/2     0.00    0.00    21     45.0     284k / 20k
+g-counter-variant                 0/2     0.00    0.00    14     45.0     116k / 15k
+kafka-multi-node                  0/2     0.00    0.00    6      45.0     44k / 12k
+kafka-multi-node-variant          0/2     0.00    0.00    4      30.5     26k / 12k
+kafka-single-node                 0/2     0.00    0.00    6      45.0     56k / 12k
+txn-read-committed                0/2     0.00    0.00    16     60.0     160k / 20k
+unique-ids                        0/2     0.00    0.00    20     30.0     179k / 16k
+unique-ids-variant                0/2     0.00    0.00    16     30.0     124k / 9k
+overall                                   0.00    0.00
+
+why attempts failed
+  out-of-time   28
+  doesnt-build  2
+
+originals and their variants
+  original                  pass^1  variant                           pass^1  change
+  broadcast-fault-tolerant  0.00    broadcast-fault-tolerant-variant  0.00    +0.00
+  g-counter                 0.00    g-counter-variant                 0.00    +0.00
+  kafka-multi-node          0.00    kafka-multi-node-variant          0.00    +0.00
+  unique-ids                0.00    unique-ids-variant                0.00    +0.00
+
+shellmate/together/thinkingmachines/Inkling  (1 error not scored)
+
+task                              passed  pass^1  pass^2  steps  minutes  tokens in / out
+broadcast-fault-tolerant          2/2     1.00    1.00    11     1.7      144k / 9k
+broadcast-fault-tolerant-variant  2/2     1.00    1.00    33     3.4      1.6M / 24k
+broadcast-few-messages            2/2     1.00    1.00    22     3.5      1.1M / 32k
+broadcast-low-latency             2/2     1.00    1.00    34     4.2      1.9M / 28k
+broadcast-multi-node              1/2     0.50    0.00    14     1.5      302k / 6k
+broadcast-single-node             2/2     1.00    1.00    10     1.3      106k / 3k
+echo                              2/2     1.00    1.00    9      0.5      72k / 1k
+g-counter                         2/2     1.00    1.00    27     2.7      1.1M / 29k
+g-counter-variant                 1/2     0.50    0.00    38     6.1      2.4M / 52k
+kafka-multi-node                  2/2     1.00    1.00    28     6.9      1.6M / 46k
+kafka-multi-node-variant          0/1     0.00            34     11.9     898k / 17k
+kafka-single-node                 1/2     0.50    0.00    30     7.3      1.7M / 15k
+txn-read-committed                1/2     0.50    0.00    44     4.9      5.0M / 38k
+unique-ids                        2/2     1.00    1.00    14     0.9      174k / 5k
+unique-ids-variant                2/2     1.00    1.00    18     1.5      409k / 9k
+overall                                   0.80
+
+why attempts failed
+  crashed               2
+  fails-under-faults    1
+  fails-without-faults  1
+  doesnt-build          1
+
+originals and their variants
+  original                  pass^1  variant                           pass^1  change
+  broadcast-fault-tolerant  1.00    broadcast-fault-tolerant-variant  1.00    +0.00
+  g-counter                 1.00    g-counter-variant                 0.50    -0.50
+  kafka-multi-node          1.00    kafka-multi-node-variant          0.00    -1.00
+  unique-ids                1.00    unique-ids-variant                1.00    +0.00
