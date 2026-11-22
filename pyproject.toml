@@ -31,6 +31,8 @@ markers = ["docker: needs a running Docker daemon (skipped without one)"]
 [tool.ruff]
 line-length = 110
 target-version = "py311"
+# Agents' code in results/ is kept as they wrote it.
+extend-exclude = ["results"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP"]
