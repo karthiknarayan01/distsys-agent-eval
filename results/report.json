@@ -1,0 +1,43 @@
+[
+  {
+    "agent": "shellmate/together/zai-org/GLM-5.3",
+    "overall": {
+      "pass_hat": {},
+      "failures": {}
+    },
+    "variants": [
+      {
+        "original": "kafka-multi-node",
+        "variant": "kafka-multi-node-variant"
+      }
+    ],
+    "tasks": [
+      {
+        "task": "kafka-multi-node",
+        "attempts": 0,
+        "passed": 0,
+        "errors": 2,
+        "pass_hat": {},
+        "failures": {},
+        "mean_steps": 0.0,
+        "mean_minutes": 0.0,
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      {
+        "task": "kafka-multi-node-variant",
+        "attempts": 1,
+        "passed": 1,
+        "errors": 1,
+        "pass_hat": {
+          "1": 1.0
+        },
+        "failures": {},
+        "mean_steps": 85,
+        "mean_minutes": 27.648333333333333,
+        "input_tokens": 6069852,
+        "output_tokens": 174358
+      }
+    ]
+  }
+]

@@ -1,0 +1,10 @@
+shellmate/together/zai-org/GLM-5.3  (3 errors not scored)
+
+task                      passed  pass^1  steps  minutes  tokens in / out
+kafka-multi-node          0/0             0      0.0      0 / 0
+kafka-multi-node-variant  1/1     1.00    85     27.6     6.1M / 174k
+overall
+
+originals and their variants
+  original          pass^1  variant                   pass^1  change
+  kafka-multi-node  0.00    kafka-multi-node-variant  1.00    +1.00
