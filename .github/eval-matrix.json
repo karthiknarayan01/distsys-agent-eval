@@ -2,15 +2,11 @@
   "attempts": 2,
   "tasks": [],
   "models": [
-    {"provider": "together", "model": "zai-org/GLM-5.3",
-     "tasks": ["broadcast-few-messages", "g-counter-variant", "kafka-multi-node", "kafka-multi-node-variant",
-               "txn-read-committed"],
-     "env": {"AGENT_MAX_OUTPUT_TOKENS": "64000"}, "redo": ["truncated"],
-     "seed": "results/shellmate-together-zai-org-GLM-5.3", "out": "shellmate-together-zai-org-GLM-5.3-64k"},
-    {"provider": "together", "model": "deepseek-ai/DeepSeek-V4-Pro-0813",
-     "tasks": ["g-counter-variant", "txn-read-committed"],
-     "env": {"AGENT_MAX_OUTPUT_TOKENS": "64000"}, "redo": ["truncated"],
-     "seed": "results/shellmate-together-deepseek-ai-DeepSeek-V4-Pro-0813",
-     "out": "shellmate-together-deepseek-ai-DeepSeek-V4-Pro-0813-64k"}
+    {"provider": "together", "model": "MiniMaxAI/MiniMax-M3.1-Flash",
+     "build_args": ["STRIP_CHECKER_SOURCE=1"], "validate": true,
+     "out": "shellmate-together-MiniMaxAI-MiniMax-M3.1-Flash-no-checker-source"},
+    {"provider": "together", "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+     "build_args": ["STRIP_CHECKER_SOURCE=1"], "validate": true,
+     "out": "shellmate-together-deepseek-ai-DeepSeek-V4.1-Flash-1017-no-checker-source"}
   ]
 }

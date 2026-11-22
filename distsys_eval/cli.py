@@ -58,6 +58,8 @@ def build_parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command", metavar="command")
     build = commands.add_parser("build-image", help="build the sandbox image every attempt runs in")
     build.add_argument("--tag", default=IMAGE, help=f"image name (default {IMAGE})")
+    build.add_argument("--build-arg", action="append", default=[], metavar="NAME=VALUE",
+                       help="passed to docker build, e.g. STRIP_CHECKER_SOURCE=1")
     build.set_defaults(run=build_image)
     tasks = commands.add_parser("tasks", help="list the tasks, or show one task's brief")
     tasks.add_argument("task", nargs="?", help="a task id: show what the agent is told")
@@ -109,7 +111,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 def build_image(args: argparse.Namespace) -> int:
     """`docker build` the sandbox image, showing docker's own progress."""
-    return subprocess.run(["docker", "build", "--tag", args.tag, str(DOCKERFILE_DIR)]).returncode
+    build_args = [arg for pair in args.build_arg for arg in ("--build-arg", pair)]
+    return subprocess.run(["docker", "build", "--tag", args.tag, *build_args, str(DOCKERFILE_DIR)]).returncode
 
 
 def show_tasks(args: argparse.Namespace) -> int:

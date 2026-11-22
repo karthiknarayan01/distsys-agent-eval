@@ -10,7 +10,9 @@
 #
 # A model can also set "env" (say AGENT_MAX_OUTPUT_TOKENS, the limit on one reply), "seed" (a
 # committed results directory to carry on from), "out" (the directory its results go to) and
-# "redo" (stop reasons whose attempts are run again, as in `distsys-eval run --redo`).
+# "redo" (stop reasons whose attempts are run again, as in `distsys-eval run --redo`), and
+# "build_args" for the sandbox image (say STRIP_CHECKER_SOURCE=1). A model with "validate" first
+# checks that its task's reference passes and its mutants fail in that image.
 #
 # Every job uploads its results/ (results.jsonl, transcripts, code, Maelstrom's output) as one
 # tarball. The report job merges them into one results/<agent>/ per model, writes report.txt,
@@ -48,7 +50,9 @@ jobs:
                   jobs.append({"provider": m["provider"], "model": m["model"], "task": task,
                                "attempts": m.get("attempts", config["attempts"]), "slug": slug,
                                "env": m.get("env", {}), "seed": m.get("seed", ""), "out": m.get("out", ""),
-                               "redo": " ".join(f"--redo {r}" for r in m.get("redo", []))})
+                               "redo": " ".join(f"--redo {r}" for r in m.get("redo", [])),
+                               "build_args": " ".join(f"--build-arg {a}" for a in m.get("build_args", [])),
+                               "validate": bool(m.get("validate"))})
           print(f"{len(jobs)} jobs")
           with open(os.environ["GITHUB_OUTPUT"], "a") as out:
               out.write(f"matrix={json.dumps({'include': jobs})}\n")
@@ -73,7 +77,10 @@ jobs:
       - name: Install
         run: pip install -e .
       - name: Build the sandbox image
-        run: distsys-eval build-image --tag distsys-agent-eval/sandbox:ci
+        run: distsys-eval build-image --tag distsys-agent-eval/sandbox:ci ${{ matrix.build_args }}
+      - name: Check the task's reference passes and its mutants fail in this image
+        if: matrix.validate
+        run: distsys-eval validate --image distsys-agent-eval/sandbox:ci "${{ matrix.task }}"
       - name: Start Ollama and download the model
         if: matrix.provider == 'ollama'
         run: |
