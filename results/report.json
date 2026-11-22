@@ -1,0 +1,182 @@
+[
+  {
+    "agent": "shellmate/together/MiniMaxAI/MiniMax-M3.1-Flash",
+    "overall": {
+      "pass_hat": {},
+      "failures": {}
+    },
+    "variants": [
+      {
+        "original": "g-counter",
+        "variant": "g-counter-variant"
+      },
+      {
+        "original": "kafka-multi-node",
+        "variant": "kafka-multi-node-variant"
+      }
+    ],
+    "tasks": [
+      {
+        "task": "g-counter",
+        "attempts": 0,
+        "passed": 0,
+        "errors": 2,
+        "pass_hat": {},
+        "failures": {},
+        "mean_steps": 0.0,
+        "mean_minutes": 0.0,
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      {
+        "task": "g-counter-variant",
+        "attempts": 0,
+        "passed": 0,
+        "errors": 2,
+        "pass_hat": {},
+        "failures": {},
+        "mean_steps": 0.0,
+        "mean_minutes": 0.0,
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      {
+        "task": "kafka-multi-node",
+        "attempts": 0,
+        "passed": 0,
+        "errors": 2,
+        "pass_hat": {},
+        "failures": {},
+        "mean_steps": 0.0,
+        "mean_minutes": 0.0,
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      {
+        "task": "kafka-multi-node-variant",
+        "attempts": 0,
+        "passed": 0,
+        "errors": 1,
+        "pass_hat": {},
+        "failures": {},
+        "mean_steps": 0.0,
+        "mean_minutes": 0.0,
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      {
+        "task": "txn-read-committed",
+        "attempts": 0,
+        "passed": 0,
+        "errors": 2,
+        "pass_hat": {},
+        "failures": {},
+        "mean_steps": 0.0,
+        "mean_minutes": 0.0,
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      {
+        "task": "unique-ids-variant",
+        "attempts": 0,
+        "passed": 0,
+        "errors": 2,
+        "pass_hat": {},
+        "failures": {},
+        "mean_steps": 0.0,
+        "mean_minutes": 0.0,
+        "input_tokens": 0,
+        "output_tokens": 0
+      }
+    ]
+  },
+  {
+    "agent": "shellmate/together/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "overall": {
+      "pass_hat": {},
+      "failures": {}
+    },
+    "variants": [
+      {
+        "original": "g-counter",
+        "variant": "g-counter-variant"
+      }
+    ],
+    "tasks": [
+      {
+        "task": "broadcast-fault-tolerant-variant",
+        "attempts": 1,
+        "passed": 1,
+        "errors": 1,
+        "pass_hat": {
+          "1": 1.0
+        },
+        "failures": {},
+        "mean_steps": 29,
+        "mean_minutes": 4.071666666666667,
+        "input_tokens": 769126,
+        "output_tokens": 17790
+      },
+      {
+        "task": "g-counter",
+        "attempts": 0,
+        "passed": 0,
+        "errors": 2,
+        "pass_hat": {},
+        "failures": {},
+        "mean_steps": 0.0,
+        "mean_minutes": 0.0,
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      {
+        "task": "g-counter-variant",
+        "attempts": 0,
+        "passed": 0,
+        "errors": 2,
+        "pass_hat": {},
+        "failures": {},
+        "mean_steps": 0.0,
+        "mean_minutes": 0.0,
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      {
+        "task": "kafka-multi-node-variant",
+        "attempts": 0,
+        "passed": 0,
+        "errors": 2,
+        "pass_hat": {},
+        "failures": {},
+        "mean_steps": 0.0,
+        "mean_minutes": 0.0,
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      {
+        "task": "kafka-single-node",
+        "attempts": 0,
+        "passed": 0,
+        "errors": 2,
+        "pass_hat": {},
+        "failures": {},
+        "mean_steps": 0.0,
+        "mean_minutes": 0.0,
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      {
+        "task": "txn-read-committed",
+        "attempts": 0,
+        "passed": 0,
+        "errors": 2,
+        "pass_hat": {},
+        "failures": {},
+        "mean_steps": 0.0,
+        "mean_minutes": 0.0,
+        "input_tokens": 0,
+        "output_tokens": 0
+      }
+    ]
+  }
+]

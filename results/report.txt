@@ -1,0 +1,30 @@
+shellmate/together/MiniMaxAI/MiniMax-M3.1-Flash  (11 errors not scored)
+
+task                      passed  steps  minutes  tokens in / out
+g-counter                 0/0     0      0.0      0 / 0
+g-counter-variant         0/0     0      0.0      0 / 0
+kafka-multi-node          0/0     0      0.0      0 / 0
+kafka-multi-node-variant  0/0     0      0.0      0 / 0
+txn-read-committed        0/0     0      0.0      0 / 0
+unique-ids-variant        0/0     0      0.0      0 / 0
+overall
+
+originals and their variants
+  original          pass^1  variant                   pass^1  change
+  g-counter         0.00    g-counter-variant         0.00    +0.00
+  kafka-multi-node  0.00    kafka-multi-node-variant  0.00    +0.00
+
+shellmate/together/deepseek-ai/DeepSeek-V4.1-Flash-1017  (11 errors not scored)
+
+task                              passed  pass^1  steps  minutes  tokens in / out
+broadcast-fault-tolerant-variant  1/1     1.00    29     4.1      769k / 18k
+g-counter                         0/0             0      0.0      0 / 0
+g-counter-variant                 0/0             0      0.0      0 / 0
+kafka-multi-node-variant          0/0             0      0.0      0 / 0
+kafka-single-node                 0/0             0      0.0      0 / 0
+txn-read-committed                0/0             0      0.0      0 / 0
+overall
+
+originals and their variants
+  original   pass^1  variant            pass^1  change
+  g-counter  0.00    g-counter-variant  0.00    +0.00
