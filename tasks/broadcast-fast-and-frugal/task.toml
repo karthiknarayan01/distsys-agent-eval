@@ -1,0 +1,18 @@
+title = "Fast and frugal broadcast across a large cluster"
+runs = 3
+
+[agent]
+minutes = 45
+steps = 150
+
+[maelstrom]
+workload = "broadcast"
+node-count = 25
+time-limit = 20
+rate = 100
+latency = 100
+
+[targets]
+msgs-per-op = 10
+median-latency-ms = 300
+max-latency-ms = 500

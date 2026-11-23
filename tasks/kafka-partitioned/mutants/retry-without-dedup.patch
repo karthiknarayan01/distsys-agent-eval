@@ -1,0 +1,16 @@
+Retries a relayed send that timed out without a request id, so when a split loses only the
+owner's answer, the retry appends the same value a second time at a new offset.
+
+diff --git a/log.go b/log.go
+index e844dca..ec1c8c1 100644
+--- a/log.go
++++ b/log.go
+@@ -45,7 +45,7 @@ func stateFor(name string) *logState {
+ func appendLocal(name string, value int, requestID string) int {
+ 	state := stateFor(name)
+ 	state.lock.Lock()
+-	if offset, seen := state.given[requestID]; seen && requestID != "" {
++	if offset, seen := state.given[requestID]; seen && requestID != "" && false {
+ 		state.lock.Unlock()
+ 		return offset
+ 	}

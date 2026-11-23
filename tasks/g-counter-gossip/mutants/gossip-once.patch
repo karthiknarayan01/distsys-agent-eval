@@ -1,0 +1,37 @@
+Sends its map once, when an add arrives, instead of on a timer, so an update sent while the
+network is split is never sent again.
+
+diff --git a/main.go b/main.go
+index fc979da..810f079 100644
+--- a/main.go
++++ b/main.go
+@@ -29,7 +29,6 @@ func main() {
+ 	node.Handle("add", handleAdd)
+ 	node.Handle("read", handleRead)
+ 	node.Handle("gossip", handleGossip)
+-	go gossipForever()
+ 	if err := node.Run(); err != nil {
+ 		log.Fatal(err)
+ 	}
+@@ -46,6 +45,7 @@ func handleAdd(msg maelstrom.Message) error {
+ 	mu.Lock()
+ 	counts[node.ID()] += body.Delta
+ 	mu.Unlock()
++	gossipOnce()
+ 	return node.Reply(msg, map[string]any{"type": "add_ok"})
+ }
+ 
+@@ -78,11 +78,8 @@ func handleGossip(msg maelstrom.Message) error {
+ 
+ // gossipForever sends this node's whole map to every other node on a timer. A send across a
+ // split is lost; the next one, after the split heals, carries everything it missed.
+-func gossipForever() {
+-	for range time.Tick(gossipEvery) {
+-		if node.ID() == "" {
+-			continue
+-		}
++func gossipOnce() {
++	for range 1 {
+ 		mu.Lock()
+ 		snapshot := make(map[string]int, len(counts))
+ 		for id, count := range counts {

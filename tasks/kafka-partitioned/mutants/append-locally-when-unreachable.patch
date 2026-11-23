@@ -1,0 +1,19 @@
+When the owner of a log can't be reached, appends the value to this node's own copy of the log
+instead, so two nodes hand out the same offsets for different values.
+
+diff --git a/handlers.go b/handlers.go
+index 6cf5251..d545d39 100644
+--- a/handlers.go
++++ b/handlers.go
+@@ -32,7 +32,10 @@ func handleSend(msg maelstrom.Message) error {
+ 			"request_id": fmt.Sprintf("%s-%d", node.ID(), requests.Add(1)),
+ 		})
+ 		if err != nil {
+-			return err
++			return node.Reply(msg, map[string]any{
++				"type":   "send_ok",
++				"offset": appendLocal(name, int(body["msg"].(float64)), ""),
++			})
+ 		}
+ 		return node.Reply(msg, relayed)
+ 	}

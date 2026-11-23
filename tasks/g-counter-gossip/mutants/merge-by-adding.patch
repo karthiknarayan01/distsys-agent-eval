@@ -1,0 +1,18 @@
+Merges a map by adding the counts it carries to its own, instead of keeping the larger of each,
+so every repeated gossip counts the same adds again.
+
+diff --git a/main.go b/main.go
+index fc979da..47ff769 100644
+--- a/main.go
++++ b/main.go
+@@ -71,7 +71,9 @@ func handleGossip(msg maelstrom.Message) error {
+ 	mu.Lock()
+ 	defer mu.Unlock()
+ 	for id, count := range body.Counts {
+-		counts[id] = max(counts[id], count)
++		if id != node.ID() {
++			counts[id] += count
++		}
+ 	}
+ 	return nil
+ }

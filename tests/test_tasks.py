@@ -32,12 +32,20 @@ time-limit = 10
 def test_shipped_tasks_load():
     tasks = load_tasks()
     assert [task.id for task in tasks] == [
-        "broadcast-fault-tolerant", "broadcast-fault-tolerant-variant", "broadcast-few-messages",
-        "broadcast-low-latency", "broadcast-multi-node", "broadcast-single-node", "echo", "g-counter",
-        "g-counter-variant", "kafka-multi-node", "kafka-multi-node-variant", "kafka-single-node",
-        "txn-read-committed", "unique-ids", "unique-ids-variant",
+        "broadcast-fast-and-frugal", "broadcast-fault-tolerant", "broadcast-fault-tolerant-variant",
+        "broadcast-few-messages", "broadcast-low-latency", "broadcast-multi-node", "broadcast-single-node",
+        "echo", "g-counter", "g-counter-gossip", "g-counter-variant", "kafka-multi-node",
+        "kafka-multi-node-variant", "kafka-partitioned", "kafka-single-node", "txn-read-committed",
+        "unique-ids", "unique-ids-variant",
     ]
     assert all(task.runs >= 1 and task.prompt and task.title for task in tasks)
+
+
+def test_the_stricter_tasks_turn_maelstroms_services_off():
+    for task_id in ("g-counter-gossip", "kafka-partitioned"):
+        task = load_task(TASKS_DIR / task_id)
+        assert task.maelstrom.services is False
+        assert task.maelstrom.flags["nemesis"] == "partition"
 
 
 def test_unique_ids_is_tested_under_partitions():

@@ -1,0 +1,51 @@
+Relays along the topology Maelstrom suggests, a grid, instead of through one hub. Each frame
+still carries a batch, but a value crosses up to eight hops to reach the far corner, so it
+arrives too late.
+
+diff --git a/topology.go b/topology.go
+index 23b0b1d..78a2d91 100644
+--- a/topology.go
++++ b/topology.go
+@@ -7,12 +7,27 @@
+ package main
+ 
+ import (
++	"encoding/json"
++	"sync"
++
+ 	maelstrom "github.com/jepsen-io/maelstrom/demo/go"
+ )
+ 
++var (
++	suggestedLock sync.Mutex
++	suggested     []string
++)
++
+ func handleTopology(msg maelstrom.Message) error {
+-	// Maelstrom still sends its suggested topology; we only ack it and
+-	// keep our own star neighbor list.
++	var body struct {
++		Topology map[string][]string `json:"topology"`
++	}
++	if err := json.Unmarshal(msg.Body, &body); err != nil {
++		return err
++	}
++	suggestedLock.Lock()
++	suggested = body.Topology[node.ID()]
++	suggestedLock.Unlock()
+ 	return node.Reply(msg, map[string]any{"type": "topology_ok"})
+ }
+ 
+@@ -21,6 +36,12 @@ func handleTopology(msg maelstrom.Message) error {
+ // Every node knows this list by itself, so we ignore the topology
+ // Maelstrom suggests.
+ func ourNeighbors() []string {
++	suggestedLock.Lock()
++	grid := suggested
++	suggestedLock.Unlock()
++	if grid != nil {
++		return grid
++	}
+ 	if node.ID() == hubOf() {
+ 		others := []string{}
+ 		for _, id := range node.NodeIDs() {
