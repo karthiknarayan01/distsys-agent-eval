@@ -4,15 +4,15 @@
 
 Five large open-weights models each got 15 distributed systems tasks, from an echo server to read-committed transactions across a network split. Each wrote a Go program alone in a container. Jepsen's Maelstrom then ran the program as a cluster, injected faults, and checked every answer. Each model had 2 attempts per task, and every model was called on Together AI.
 
-| model | pass^1 | pass^2 | attempts passed |
-|---|---|---|---|
-| MiniMax M3.1 Flash | 1.00 | 1.00 | 30 / 30 |
-| DeepSeek V4.1 Flash 1017 | 1.00 | 1.00 | 30 / 30 |
-| DeepSeek V4 Pro 0813 | 0.93 | 0.86 | 27 / 29 |
-| Inkling | 0.80 | 0.71 | 24 / 29 |
-| GLM-5.3 | 0.77 | 0.67 | 23 / 30 |
+| model | 16k reply limit: pass^1 / pass^2 | cut-off attempts rerun at 64k: pass^1 / pass^2 |
+|---|---|---|
+| MiniMax M3.1 Flash | 1.00 / 1.00 (30 of 30) | — |
+| DeepSeek V4.1 Flash 1017 | 1.00 / 1.00 (30 of 30) | — |
+| DeepSeek V4 Pro 0813 | 0.93 / 0.86 (27 of 29) | 1.00 / 1.00 (29 of 29) |
+| GLM-5.3 | 0.77 / 0.67 (23 of 30) | 1.00 / 1.00 (30 of 30) |
+| Inkling | 0.80 / 0.71 (24 of 29) | — |
 
-The short answer: yes, the best open models now write this code reliably. Two of the five passed every attempt. Of the 14 failed attempts across all five, 9 are replies cut off before a finished program existed. Only Inkling's 5 are wrong programs.
+The short answer: yes, the best open models now write this code reliably. Four of the five pass every attempt once their replies have room to finish. Of the 14 attempts that failed at the 16k limit, 9 were replies cut off before a finished program existed, and all 9 passed when run again with more room. Only Inkling's 5 are wrong programs.
 
 ## Two perfect scores
 
@@ -31,7 +31,11 @@ The harness caps each model reply at 16,000 output tokens, the same for every mo
 
 That is every one of DeepSeek V4 Pro's 2 failures and GLM-5.3's 7. In 8 of the 9 it happened on the very first reply, before the agent had written a file. GLM-5.3 reasons at its maximum effort unless told otherwise, and on harder tasks its first plan didn't fit. The other 23 GLM-5.3 attempts and 27 DeepSeek V4 Pro attempts all produced programs, and every one of those programs passed.
 
-So these two scores measure how well each model fits the harness's output limit as much as how well it writes distributed systems code. A larger limit, or a lower reasoning effort for GLM-5.3, would likely raise both.
+To separate the limit from the model, the 9 cut-off attempts were run again, once each, with replies of up to 64,000 tokens and nothing else changed. All 9 passed. With them, DeepSeek V4 Pro goes from 27 of 29 to 29 of 29, and GLM-5.3 from 23 of 30 to 30 of 30.
+
+Rerunning only the cut-off attempts is fair here because none of them got as far as a program: 8 ended on the very first reply, and the ninth ended without code that built. They never had a result to replace, so this is like retrying an attempt the harness let down, not giving failed programs a second try. Rerunning every attempt of both models at 64k would be the cleaner experiment, at about the cost of their first run.
+
+The lesson is about the harness, not the models: a reply limit that suits most models silently penalizes one that reasons at length. The harness should set the limit from each model's own maximum, or report cut-off attempts separately from wrong ones, as here.
 
 ## Inkling: right most of the time, wrong in the classic ways
 
@@ -55,13 +59,13 @@ Four tasks have a variant: the same problem with renamed messages and fields and
 
 ## What this says about the benchmark
 
-With two models at 30 of 30, these 15 tasks no longer separate the best open models. They still separate models that write correct code from ones that don't, and they catch real bugs that pass a single test run. The next version needs harder tasks: more nodes, nastier faults, and problems without a public reference solution.
+With four models at 1.00, these 15 tasks no longer separate the best open models. They still separate models that write correct code from ones that don't, and they catch real bugs that pass a single test run. The next version needs harder tasks: more nodes, nastier faults, and problems without a public reference solution.
 
 ## Caveats
 
 - **2 attempts per task.** pass^2 is the most this supports. One attempt moves a task's pass^1 by 0.5.
 - **Models as Together serves them.** Every model was called through Together's API. Its serving setup, such as quantization, isn't something this run controls.
-- **The output limit.** As above, 9 failures come from the 16,000-token reply limit, which treats models that think at length differently from ones that don't.
+- **The output limit.** As above, 9 attempts were cut off at the 16,000-token reply limit and run again at 64,000. Both sets of numbers are reported, and the 16k results are kept unchanged in `results/`.
 - **2 attempts not scored.** One DeepSeek V4 Pro attempt lost its connection to Together mid-reply on every retry. One Inkling attempt at kafka-multi-node-variant left Maelstrom unable to reach a verdict, most likely because its checker ran out of memory on the runner. Both count as harness errors, not failures.
 - **An earlier run on CPUs.** Four 4B–9B models were first run in Ollama on the CI runner's CPU, with no GPU. At 100 to 190 seconds a step they ran out of time on almost every attempt, so those results measured the hardware, not the models, and they aren't reported here.
 

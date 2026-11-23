@@ -12,8 +12,10 @@ One attempt:
 
 Attempts run `jobs` at a time, and each is written to results.jsonl as soon as it ends. So a
 run that is stopped and started again with the same output directory carries on: attempts
-already recorded are kept, and only missing ones and errors are run again. The directory
-belongs to one agent; running another into it is refused, so results are never mixed.
+already recorded are kept, and only missing ones and errors are run again. `redo` also runs
+again the attempts the agent stopped for one of the given reasons, such as "truncated": its
+reply hit the output limit. The directory belongs to one agent; running another into it is
+refused, so results are never mixed.
 """
 
 from __future__ import annotations
@@ -54,12 +56,14 @@ async def run(
     jobs: int = 1,
     sandbox: SandboxFactory | None = None,
     on_result: ResultSink | None = None,
+    redo: tuple[str, ...] = (),
 ) -> list[AttemptResult]:
-    """Run every attempt not yet recorded in `out`, `jobs` at a time, and return all of them.
-    `on_result` is told about each attempt as it is recorded."""
+    """Run every attempt not yet recorded in `out`, and those the agent stopped for a reason in
+    `redo`, `jobs` at a time, and return all of them. `on_result` is told about each attempt as
+    it is recorded."""
     sandbox = sandbox or sandboxes()
     results_file = out / RESULTS_FILE
-    pending = attempts_to_run(agent, tasks, attempts, load(results_file))
+    pending = attempts_to_run(agent, tasks, attempts, load(results_file), redo)
     limit = asyncio.Semaphore(jobs)
 
     async def one(task: Task, number: int) -> None:
@@ -74,14 +78,14 @@ async def run(
 
 
 def attempts_to_run(
-    agent: Agent, tasks: list[Task], attempts: int, recorded: list[AttemptResult]
+    agent: Agent, tasks: list[Task], attempts: int, recorded: list[AttemptResult], redo: tuple[str, ...] = ()
 ) -> list[tuple[Task, int]]:
-    """Every (task, attempt number) without a scored result yet. Raises RunnerError if the
-    results recorded so far are another agent's."""
+    """Every (task, attempt number) without a scored result yet, or whose agent stopped for a
+    reason in `redo`. Raises RunnerError if the results recorded so far are another agent's."""
     others = sorted({r.agent for r in recorded} - {agent.name})
     if others:
         raise RunnerError(f"the output directory holds results from {', '.join(others)}, not {agent.name}")
-    done = {r.key for r in recorded if r.outcome != "error"}
+    done = {r.key for r in recorded if r.outcome != "error" and r.stop not in redo}
     return [(t, n) for t in tasks for n in range(1, attempts + 1) if (t.id, n) not in done]
 
 

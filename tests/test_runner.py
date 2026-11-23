@@ -121,6 +121,22 @@ async def test_a_second_run_does_only_whats_missing_and_retries_errors(tmp_path)
     assert [(r.attempt, r.outcome) for r in results] == [(1, "fail"), (2, "pass"), (3, "pass")]
 
 
+async def test_redo_runs_again_the_attempts_stopped_for_that_reason(tmp_path):
+    results_file = tmp_path / RESULTS_FILE
+    cut_off = AttemptResult("echo", 1, "shellmate/fake", "fail", category="doesnt-build", stop="truncated")
+    wrong = AttemptResult("echo", 2, "shellmate/fake", "fail", category="crashed", stop="finished")
+    append(results_file, cut_off)
+    append(results_file, wrong)
+    agent = Agent()
+
+    results = await run(agent, [ECHO], 2, tmp_path, sandbox=sandbox(), redo=("truncated",))
+
+    assert agent.tried == ["echo"]  # attempt 1 only: attempt 2 stopped for another reason
+    assert [(r.attempt, r.outcome, r.stop) for r in results] == [
+        (1, "pass", "finished"), (2, "fail", "finished"),
+    ]
+
+
 async def test_another_agents_results_are_never_mixed_in(tmp_path):
     append(tmp_path / RESULTS_FILE, AttemptResult("echo", 1, "shellmate/other", "pass"))
     with pytest.raises(RunnerError, match="shellmate/other"):

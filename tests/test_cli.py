@@ -125,8 +125,8 @@ def test_run_says_so_when_the_provider_cant_be_used(monkeypatch, capsys, provide
 def test_run_prints_each_attempt_then_the_totals(monkeypatch, capsys):
     from distsys_eval.results import AttemptResult
 
-    async def fake_run(agent, tasks, attempts, out, jobs, sandbox, on_result):
-        assert (agent.name, attempts, jobs) == ("shellmate/ollama/qwen3.5:4b", 2, 1)
+    async def fake_run(agent, tasks, attempts, out, jobs, sandbox, on_result, redo):
+        assert (agent.name, attempts, jobs, redo) == ("shellmate/ollama/qwen3.5:4b", 2, 1, ())
         assert out.as_posix() == "results/shellmate-ollama-qwen3.5-4b"
         results = [AttemptResult("echo", n, agent.name, "pass") for n in (1, 2)]
         for result in results:
@@ -140,6 +140,19 @@ def test_run_prints_each_attempt_then_the_totals(monkeypatch, capsys):
     ]
 
 
+def test_run_can_redo_attempts_cut_off_at_the_output_limit(monkeypatch, tmp_path):
+    seen = {}
+
+    async def fake_run(agent, tasks, attempts, out, jobs, sandbox, on_result, redo):
+        seen["redo"] = redo
+        return []
+
+    monkeypatch.setattr("distsys_eval.runner.run", fake_run)
+    args = ["run", "echo", "--provider", "ollama", "--out", str(tmp_path), "--redo", "truncated"]
+    assert main(args) == 0
+    assert seen["redo"] == ("truncated",)
+
+
 def test_run_a_command_agent_with_a_network_and_its_key(monkeypatch, capsys):
     seen = {}
 
@@ -147,7 +160,7 @@ def test_run_a_command_agent_with_a_network_and_its_key(monkeypatch, capsys):
         seen["sandbox"] = (image, network, env)
         return None
 
-    async def fake_run(agent, tasks, attempts, out, jobs, sandbox, on_result):
+    async def fake_run(agent, tasks, attempts, out, jobs, sandbox, on_result, redo):
         seen["agent"] = (agent.name, agent.command, out.as_posix())
         return []
 

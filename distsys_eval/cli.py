@@ -94,6 +94,9 @@ def build_parser() -> argparse.ArgumentParser:
     attempts.add_argument("--attempts", type=int, default=5, help="attempts per task (default 5)")
     attempts.add_argument("--out", type=Path, help="results directory (default results/<agent>)")
     attempts.add_argument("--jobs", type=int, default=1, help="attempts to run at once (default 1)")
+    attempts.add_argument("--redo", action="append", default=[],
+                          choices=["out-of-steps", "out-of-time", "truncated"],
+                          help="also run again the recorded attempts the agent stopped for this reason")
     attempts.add_argument("--image", default=IMAGE, help=f"sandbox image (default {IMAGE})")
     attempts.set_defaults(run=run_command)
     report = commands.add_parser("report", help="summarize the results of one or more runs")
@@ -181,6 +184,7 @@ def run_command(args: argparse.Namespace) -> int:
             agent, chosen, args.attempts, out, args.jobs,
             runner.sandboxes(args.image, "bridge" if args.network else "none", tuple(args.env)),
             on_result=lambda result: print(line(result), flush=True),
+            redo=tuple(args.redo),
         ))
     except runner.RunnerError as e:
         print(e, file=sys.stderr)
