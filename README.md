@@ -49,7 +49,7 @@ The full write-up, with each failure traced through its transcript, is in **[RES
 
 ## What the agent is asked to build
 
-15 tasks, from a warm-up to transactions that must stay available while the cluster is split in two.
+18 tasks, from a warm-up to transactions that must stay available while the cluster is split in two.
 
 | the agent builds… | across | while Maelstrom… |
 |---|---|---|
@@ -58,6 +58,16 @@ The full write-up, with each failure traced through its transcript, is in **[RES
 | ➕ **A grow-only counter** on a shared key/value store | 3–4 nodes | splits the network, and the final count must still be exact |
 | 📜 **A Kafka-style log** with offsets and commits | 1–3 nodes | sends 1,000 requests a second, from clients that may ask any node |
 | 🔐 **Read-committed transactions** | 2 nodes | splits the network, and no transaction may wait for the other node |
+
+Three of them are stricter versions of the others, added after the November 2026 results, which cover the first 15:
+
+| task | what's stricter |
+|---|---|
+| `g-counter-gossip` | The counter across 5 nodes with Maelstrom's own services turned off and the network split every few seconds, so the nodes must keep the count themselves and keep resending it until every node agrees. |
+| `kafka-partitioned` | The Kafka-style log across 3 nodes with no services and a splitting network, so a request relayed to a log's owner must be retried without appending the value twice. |
+| `broadcast-fast-and-frugal` | Broadcast across 25 nodes with at most 10 messages per operation, a median latency of 300 ms and a maximum of 500 ms, all at once. |
+
+A task can turn Maelstrom's services off with `services = false`: the node then runs behind `maelstrom-rename`, which answers any message to `seq-kv`, `lin-kv`, `lww-kv` or `lin-tso` with an error.
 
 Each task tells the agent the exact `maelstrom test` command it will be graded with, so it can run the same test itself while it works.
 
