@@ -21,6 +21,13 @@ RUN curl -fsSL -o /tmp/maelstrom.tar.bz2 \
  && ln -s /opt/maelstrom/maelstrom /usr/local/bin/maelstrom \
  && rm /tmp/maelstrom.tar.bz2
 
+# STRIP_CHECKER_SOURCE=1 builds a sandbox without the Clojure source of Maelstrom's checkers, so
+# an agent can't read how it will be graded. Only the compiled classes Maelstrom loads remain.
+ARG STRIP_CHECKER_SOURCE=0
+COPY strip_checker_source.py /tmp/strip_checker_source.py
+RUN if [ "$STRIP_CHECKER_SOURCE" = 1 ]; then python3 /tmp/strip_checker_source.py /opt/maelstrom/lib/maelstrom.jar; fi \
+ && rm /tmp/strip_checker_source.py
+
 # Maelstrom's Go library goes into the module cache, so a solution builds offline.
 RUN mkdir /tmp/warm && cd /tmp/warm \
  && go mod init warm \

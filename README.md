@@ -32,10 +32,11 @@ No attempt by any model failed as `too-slow`: every program that worked also sta
 
 - **Four models were perfect.** MiniMax M3.1 Flash and DeepSeek V4.1 Flash passed all 30 attempts at the 16k limit, including the Kafka-style logs and the transactions that must stay available through a network split. DeepSeek V4 Pro and GLM-5.3 passed every attempt once their replies had room.
 - **The reply limit decided two rankings.** All 9 of DeepSeek V4 Pro's and GLM-5.3's failures at 16k were replies cut off at the limit, 8 of them before any code existed; GLM-5.3 reasons at its maximum effort by default. Run again with a 64,000-token limit, all 9 passed. A reasoning model needs room to think, and a harness that doesn't give it measures the limit, not the model.
+- **Reading the grader isn't why they pass.** The perfect scorers often read Maelstrom's checker source, but attempts that never looked at it passed just as often (56 of 58 against 78 of 82 that did). With the source stripped from the sandbox, MiniMax and DeepSeek V4.1 Flash still passed all 59 scored attempts.
 - **Only Inkling wrote wrong code.** Its 5 failures are real distributed systems bugs: an update sent once and never retried, so a network split loses it; a map written by concurrent handlers with no lock, the likely cause of a node crash; and a tool call written as plain text, which ended an attempt before any code.
 - **The tasks are at their ceiling.** With four models at 1.00, these 15 tasks no longer separate the best open models. Harder tasks are the next step.
 
-The full write-up, with each failure traced through its transcript, is in **[RESULTS.md](RESULTS.md)**. Every attempt's results line, transcript and final code are in [`results/`](results/). `results/report.txt` has the per-task tables at the 16k limit, and `results/report-64k.txt` has them for DeepSeek V4 Pro and GLM-5.3 with their cut-off attempts rerun.
+The full write-up, with each failure traced through its transcript, is in **[RESULTS.md](RESULTS.md)**. Every attempt's results line, transcript and final code are in [`results/`](results/). `results/report.txt` has the per-task tables at the 16k limit, and `results/report-64k.txt` has them for DeepSeek V4 Pro and GLM-5.3 with their cut-off attempts rerun. `results/report-no-checker-source.txt` has them for the two perfect models in the sandbox without the checker's source.
 
 <details>
 <summary><b>How this run was done</b></summary>

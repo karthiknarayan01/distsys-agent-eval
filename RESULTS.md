@@ -21,9 +21,30 @@ MiniMax M3.1 Flash and DeepSeek V4.1 Flash passed all 30 attempts each. That inc
 Two habits set them apart, though with 30 attempts each these are patterns, not proof:
 
 - **They tested more.** The median attempt ran Maelstrom 3 times for MiniMax and 3.5 times for DeepSeek V4.1 Flash, against 2 for Inkling and DeepSeek V4 Pro. A bug that shows up one run in three is easier to catch the more you run.
-- **They read the grader.** In 25 of 30 attempts for MiniMax and 20 of 30 for DeepSeek V4.1 Flash, the agent opened Maelstrom's jar and read the Clojure source of the checker it would be graded by. Inkling and DeepSeek V4 Pro did this in 12. The container has no network and the test tool is installed for the agent to use, so this is fair play. But it's worth knowing that capable agents go looking for the grader, and that the tasks hold up when they find it.
+- **They read the grader.** In 25 of 30 attempts for MiniMax and 20 of 30 for DeepSeek V4.1 Flash, the agent opened Maelstrom's jar and read the Clojure source of the checker it would be graded by. Inkling and DeepSeek V4 Pro did this in 12. The next section tests whether that explains their scores; it doesn't.
 
 Their code also avoids the bugs that sank Inkling. In the counter variant, every attempt from both models re-sends its state on a timer, so an update lost to a network split is sent again later. In multi-node broadcast, every attempt guards its shared state with a mutex.
+
+## Does reading the grader explain the perfect scores?
+
+The container has no network, and Maelstrom is installed for the agent to test with, so reading its checker is fair play. But the two models that read it most were also the two that never failed, so it's fair to ask whether one explains the other. Two tests say no.
+
+**Attempts that never looked passed just as often.** Splitting every model's scored attempts by whether the agent opened Maelstrom's jar or a Clojure source file (`python -m distsys_eval.grader_reading results/*/`), and leaving out attempts cut off before their first step:
+
+| model | read the grader | didn't |
+|---|---|---|
+| MiniMax M3.1 Flash | 25 / 25 | 5 / 5 |
+| DeepSeek V4.1 Flash | 20 / 20 | 10 / 10 |
+| DeepSeek V4 Pro | 11 / 11 | 16 / 16 |
+| GLM-5.3 | 13 / 14 | 10 / 10 |
+| Inkling | 9 / 12 | 15 / 17 |
+| all | 78 / 82 (95%) | 56 / 58 (97%) |
+
+**With the source removed, the perfect scores held.** Both perfect models ran every task again in a sandbox whose Maelstrom jar had no checker source: the 286 Clojure source files whose compiled classes are in the jar were taken out, so Maelstrom loads exactly what it did before. Kafka and transaction runs give the same verdicts with the stripped jar as with the original, and the other tasks' references still pass and their mutants still fail in it. MiniMax passed 29 of 29 scored attempts and DeepSeek V4.1 Flash 30 of 30.
+
+Removing the source didn't stop the agents looking. In 16 of MiniMax's 30 attempts and 11 of DeepSeek V4.1 Flash's, the agent disassembled the checker's compiled classes instead, with `javap` or by loading them in Clojure. So the cleanest comparison is the stripped-sandbox attempts that never touched the jar at all: 26 of 26 passed.
+
+Reading the grader is a habit of thorough agents, not the reason they pass. It is still worth knowing that capable agents go looking for how they'll be graded, and will disassemble it when the source isn't there.
 
 ## Cut off before finishing: DeepSeek V4 Pro and GLM-5.3
 
@@ -66,6 +87,7 @@ With four models at 1.00, these 15 tasks no longer separate the best open models
 - **2 attempts per task.** pass^2 is the most this supports. One attempt moves a task's pass^1 by 0.5.
 - **Models as Together serves them.** Every model was called through Together's API. Its serving setup, such as quantization, isn't something this run controls.
 - **The output limit.** As above, 9 attempts were cut off at the 16,000-token reply limit and run again at 64,000. Both sets of numbers are reported, and the 16k results are kept unchanged in `results/`.
+- **The ablation's kafka tasks weren't validated in CI.** The stripped sandbox's other tasks passed `distsys-eval validate` on GitHub's runners. The kafka checker can't reach a verdict there during validation, in the stripped and the normal image alike, so the kafka tasks were validated locally instead, with the same verdicts on both jars. One MiniMax kafka-single-node attempt in that sandbox is unscored for the same reason.
 - **2 attempts not scored.** One DeepSeek V4 Pro attempt lost its connection to Together mid-reply on every retry. One Inkling attempt at kafka-multi-node-variant left Maelstrom unable to reach a verdict, most likely because its checker ran out of memory on the runner. Both count as harness errors, not failures.
 - **An earlier run on CPUs.** Four 4B–9B models were first run in Ollama on the CI runner's CPU, with no GPU. At 100 to 190 seconds a step they ran out of time on almost every attempt, so those results measured the hardware, not the models, and they aren't reported here.
 

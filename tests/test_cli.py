@@ -30,6 +30,14 @@ def test_build_image_runs_docker_build(monkeypatch):
     assert argv[4].endswith("docker")
 
 
+def test_build_image_passes_build_args(monkeypatch):
+    calls = []
+    monkeypatch.setattr("subprocess.run", lambda argv: calls.append(argv) or type("R", (), {"returncode": 0}))
+    assert main(["build-image", "--tag", "sandbox:test", "--build-arg", "STRIP_CHECKER_SOURCE=1"]) == 0
+    (argv,) = calls
+    assert argv[4:6] == ["--build-arg", "STRIP_CHECKER_SOURCE=1"]
+
+
 def test_tasks_lists_every_task(capsys):
     assert main(["tasks"]) == 0
     lines = capsys.readouterr().out.splitlines()
