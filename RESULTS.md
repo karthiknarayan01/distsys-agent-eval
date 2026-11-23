@@ -14,7 +14,7 @@ Five large open-weights models each got 15 distributed systems tasks, from an ec
 
 The short answer: yes, the best open models now write this code reliably. Four of the five pass every attempt once their replies have room to finish. Of the 14 attempts that failed at the 16k limit, 9 were replies cut off before a finished program existed, and all 9 passed when run again with more room. Only Inkling's 5 are wrong programs.
 
-## Two perfect scores
+## The two that never needed a rerun
 
 MiniMax M3.1 Flash and DeepSeek V4.1 Flash passed all 30 attempts each. That includes the tasks the others stumbled on: the Kafka-style logs under 1,000 requests a second, the counter that must stay exact through a split, and transactions that must stay available while the two nodes can't talk.
 
@@ -25,7 +25,7 @@ Two habits set them apart, though with 30 attempts each these are patterns, not 
 
 Their code also avoids the bugs that sank Inkling. In the counter variant, every attempt from both models re-sends its state on a timer, so an update lost to a network split is sent again later. In multi-node broadcast, every attempt guards its shared state with a mutex.
 
-## Does reading the grader explain the perfect scores?
+## Does reading the grader explain their scores?
 
 The container has no network, and Maelstrom is installed for the agent to test with, so reading its checker is fair play. But the two models that read it most were also the two that never failed, so it's fair to ask whether one explains the other. Two tests say no.
 
