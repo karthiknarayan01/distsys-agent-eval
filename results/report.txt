@@ -1,0 +1,33 @@
+shellmate/together/MiniMaxAI/MiniMax-M3.1-Flash  (1 error not scored)
+
+task                      passed  pass^1  pass^2  steps  minutes  tokens in / out
+g-counter                 2/2     1.00    1.00    28     6.1      2.1M / 29k
+g-counter-variant         2/2     1.00    1.00    26     4.8      1.5M / 30k
+kafka-multi-node          2/2     1.00    1.00    98     29.8     11.8M / 148k
+kafka-multi-node-variant  2/2     1.00    1.00    70     13.1     8.6M / 74k
+kafka-single-node         1/1     1.00            96     21.3     6.1M / 47k
+txn-read-committed        2/2     1.00    1.00    36     6.6      2.8M / 46k
+unique-ids-variant        2/2     1.00    1.00    12     2.5      546k / 11k
+overall                           1.00
+
+originals and their variants
+  original          pass^1  variant                   pass^1  change
+  g-counter         1.00    g-counter-variant         1.00    +0.00
+  kafka-multi-node  1.00    kafka-multi-node-variant  1.00    +0.00
+
+shellmate/together/deepseek-ai/DeepSeek-V4.1-Flash-1017
+
+task                              passed  pass^1  pass^2  steps  minutes  tokens in / out
+broadcast-fault-tolerant-variant  2/2     1.00    1.00    22     4.7      1.2M / 28k
+g-counter                         2/2     1.00    1.00    22     5.7      801k / 29k
+g-counter-variant                 2/2     1.00    1.00    24     6.4      2.1M / 40k
+kafka-multi-node                  2/2     1.00    1.00    45     17.0     5.1M / 124k
+kafka-multi-node-variant          2/2     1.00    1.00    54     12.3     6.2M / 81k
+kafka-single-node                 2/2     1.00    1.00    52     12.1     5.5M / 75k
+txn-read-committed                2/2     1.00    1.00    39     8.5      3.1M / 78k
+overall                                   1.00    1.00
+
+originals and their variants
+  original          pass^1  variant                   pass^1  change
+  g-counter         1.00    g-counter-variant         1.00    +0.00
+  kafka-multi-node  1.00    kafka-multi-node-variant  1.00    +0.00
