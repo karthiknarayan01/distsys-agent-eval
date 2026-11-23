@@ -1,261 +1,338 @@
-// Kafka-style append-only logs, replicated across two Maelstrom nodes.
+// Kafka-style append-only log across two nodes, built on Maelstrom's
+// linearizable key/value service (lin-kv).
 //
-// Design: one node (the lexicographically smallest node ID) acts as the
-// leader and owns the authoritative copy of every log plus the committed
-// offsets. The other node forwards all four client RPCs to the leader and
-// relays the leader's response back to the client. Since the leader
-// serializes every operation, both nodes always agree on every log and the
-// whole thing behaves as a strictly serializable, single-process Kafka.
+// Design:
+//
+// For each log key K we keep a single lin-kv value at "log.K": a JSON array of
+// messages, where the offset of the i'th message is i. An append is performed
+// with a compare-and-swap of the whole array (read, append, cas, retry on
+// conflict), which makes appends atomic: the array never has holes, and an
+// acknowledged send is immediately visible to every poll. Since offsets are
+// simply indices into the array they are unique and only ever grow.
+//
+// Committed offsets are stored per key at "com.K" and are only ever advanced
+// (monotonic compare-and-swap), so both nodes agree on them.
+//
+// Because lin-kv is linearizable and shared by both nodes, either node can
+// serve any request and clients observe exactly the same log whichever node
+// they talk to.
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"sort"
 	"sync"
+	"time"
 
 	maelstrom "github.com/jepsen-io/maelstrom/demo/go"
 )
 
-// maxPairs caps how many [offset, value] pairs we'll return for a single log
-// in one poll. Clients keep polling from wherever we leave them, so this only
-// bounds the size of a single response.
-const maxPairs = 500
+const (
+	// Names of the keys we use inside lin-kv.
+	logKeyPrefix    = "kafka.log."
+	commitKeyPrefix = "kafka.com."
 
-// server holds all of our state.
+	// The KV service we talk to.
+	kvService = "lin-kv"
+
+	// A poll that asks about several logs waits a moment before reading, so
+	// that any appends still in flight at the end of the test have settled
+	// and all logs are read from what is effectively a single point in time.
+	multiKeyPollDelay = 100 * time.Millisecond
+
+	// Small pause between retries of a compare-and-swap that lost a race.
+	casRetryPause = 200 * time.Microsecond
+)
+
+// server implements the kafka workload on top of a Maelstrom node.
 type server struct {
-	n *maelstrom.Node
-
-	// ready is closed once the init message has been processed; node IDs are
-	// only known then.
-	ready chan struct{}
-	once  sync.Once
-
-	// leader is the node which owns the authoritative state.
-	leader string
-
-	// mu guards the state below. Only meaningful on the leader.
-	mu        sync.Mutex
-	logs      map[string][]interface{} // key -> values; offset == index
-	committed map[string]int64          // key -> highest committed offset
-}
-
-func newServer(n *maelstrom.Node) *server {
-	return &server{
-		n:         n,
-		ready:     make(chan struct{}),
-		logs:      make(map[string][]interface{}),
-		committed: make(map[string]int64),
-	}
-}
-
-// waitReady blocks until we know our own node ID and the cluster membership.
-func (s *server) waitReady() {
-	<-s.ready
-}
-
-// isLeader reports whether this node owns the authoritative state.
-func (s *server) isLeader() bool {
-	return s.n.ID() == s.leader
-}
-
-// ---- state operations (leader only) ----
-
-// append adds a message to a log and returns the offset it landed at.
-func (s *server) append(key string, msg interface{}) int64 {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	log := s.logs[key]
-	s.logs[key] = append(log, msg)
-	return int64(len(s.logs[key]) - 1)
-}
-
-// poll returns, for every requested log, the [offset, value] pairs starting
-// at the first offset which is >= the requested one. Logs with nothing to
-// deliver are omitted from the result.
-func (s *server) poll(offsets map[string]int64) map[string][][]interface{} {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	msgs := make(map[string][][]interface{}, len(offsets))
-	for key, start := range offsets {
-		if start < 0 {
-			start = 0
-		}
-		log := s.logs[key]
-		if int64(len(log)) <= start {
-			// Nothing at or after this offset.
-			continue
-		}
-		end := int64(len(log))
-		if start+maxPairs < end {
-			end = start + maxPairs
-		}
-		pairs := make([][]interface{}, 0, end-start)
-		for i := start; i < end; i++ {
-			pairs = append(pairs, []interface{}{i, log[i]})
-		}
-		msgs[key] = pairs
-	}
-	return msgs
-}
-
-// commit records the highest offsets clients have finished reading. Committed
-// offsets only ever advance.
-func (s *server) commit(offsets map[string]int64) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	for key, off := range offsets {
-		if cur, ok := s.committed[key]; !ok || off > cur {
-			s.committed[key] = off
-		}
-	}
-}
-
-// committedOffsets returns the committed offset of every key we know about.
-func (s *server) committedOffsets(keys []string) map[string]int64 {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	out := make(map[string]int64, len(keys))
-	for _, key := range keys {
-		if off, ok := s.committed[key]; ok {
-			out[key] = off
-		}
-	}
-	return out
-}
-
-// ---- message handlers ----
-
-func (s *server) handleInit(msg maelstrom.Message) error {
-	ids := append([]string(nil), s.n.NodeIDs()...)
-	sort.Strings(ids)
-	if len(ids) == 0 {
-		return fmt.Errorf("no node ids in init message")
-	}
-	s.leader = ids[0]
-	s.once.Do(func() { close(s.ready) })
-	log.Printf("initialized %s; leader is %s", s.n.ID(), s.leader)
-	return nil
-}
-
-func (s *server) handleSend(msg maelstrom.Message) error {
-	s.waitReady()
-	if !s.isLeader() {
-		return s.forward(msg)
-	}
-
-	var body struct {
-		Key string      `json:"key"`
-		Msg interface{} `json:"msg"`
-	}
-	if err := json.Unmarshal(msg.Body, &body); err != nil {
-		return fmt.Errorf("parse send body: %w", err)
-	}
-	offset := s.append(body.Key, body.Msg)
-	return s.n.Reply(msg, map[string]interface{}{
-		"type":   "send_ok",
-		"offset": offset,
-	})
-}
-
-func (s *server) handlePoll(msg maelstrom.Message) error {
-	s.waitReady()
-	if !s.isLeader() {
-		return s.forward(msg)
-	}
-
-	var body struct {
-		Offsets map[string]int64 `json:"offsets"`
-	}
-	if err := json.Unmarshal(msg.Body, &body); err != nil {
-		return fmt.Errorf("parse poll body: %w", err)
-	}
-	msgs := s.poll(body.Offsets)
-	return s.n.Reply(msg, map[string]interface{}{
-		"type": "poll_ok",
-		"msgs": msgs,
-	})
-}
-
-func (s *server) handleCommitOffsets(msg maelstrom.Message) error {
-	s.waitReady()
-	if !s.isLeader() {
-		return s.forward(msg)
-	}
-
-	var body struct {
-		Offsets map[string]int64 `json:"offsets"`
-	}
-	if err := json.Unmarshal(msg.Body, &body); err != nil {
-		return fmt.Errorf("parse commit_offsets body: %w", err)
-	}
-	s.commit(body.Offsets)
-	return s.n.Reply(msg, map[string]interface{}{
-		"type": "commit_offsets_ok",
-	})
-}
-
-func (s *server) handleListCommittedOffsets(msg maelstrom.Message) error {
-	s.waitReady()
-	if !s.isLeader() {
-		return s.forward(msg)
-	}
-
-	var body struct {
-		Keys []string `json:"keys"`
-	}
-	if err := json.Unmarshal(msg.Body, &body); err != nil {
-		return fmt.Errorf("parse list_committed_offsets body: %w", err)
-	}
-	offsets := s.committedOffsets(body.Keys)
-	return s.n.Reply(msg, map[string]interface{}{
-		"type":    "list_committed_offsets_ok",
-		"offsets": offsets,
-	})
-}
-
-// forward passes a client request on to the leader and relays the leader's
-// response back to the client.
-func (s *server) forward(msg maelstrom.Message) error {
-	var body map[string]interface{}
-	if err := json.Unmarshal(msg.Body, &body); err != nil {
-		return fmt.Errorf("parse body for forwarding: %w", err)
-	}
-	delete(body, "msg_id")
-	delete(body, "in_reply_to")
-
-	err := s.n.RPC(s.leader, body, func(resp maelstrom.Message) error {
-		var replyBody map[string]interface{}
-		if err := json.Unmarshal(resp.Body, &replyBody); err != nil {
-			return fmt.Errorf("parse leader reply: %w", err)
-		}
-		delete(replyBody, "in_reply_to")
-		delete(replyBody, "msg_id")
-		return s.n.Reply(msg, replyBody)
-	})
-	if err != nil {
-		return fmt.Errorf("forward %s to %s: %w", body["type"], s.leader, err)
-	}
-	return nil
+	node *maelstrom.Node
+	kv   *maelstrom.KV
 }
 
 func main() {
-	log.SetPrefix(fmt.Sprintf("%s ", os.Args[0]))
+	// The library logs every message it reads or writes to stderr; that is
+	// a lot of noise and overhead at high request rates, so throw it away.
+	log.SetOutput(io.Discard)
 
 	n := maelstrom.NewNode()
-	s := newServer(n)
+	s := &server{node: n, kv: maelstrom.NewLinKV(n)}
 
-	n.Handle("init", s.handleInit)
 	n.Handle("send", s.handleSend)
 	n.Handle("poll", s.handlePoll)
 	n.Handle("commit_offsets", s.handleCommitOffsets)
 	n.Handle("list_committed_offsets", s.handleListCommittedOffsets)
 
 	if err := n.Run(); err != nil {
-		log.Printf("fatal: %v", err)
+		fmt.Fprintf(os.Stderr, "fatal: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+// ---------------------------------------------------------------- requests --
+
+func (s *server) handleSend(msg maelstrom.Message) error {
+	var req struct {
+		Key string          `json:"key"`
+		Msg json.RawMessage `json:"msg"`
+	}
+	if err := json.Unmarshal(msg.Body, &req); err != nil {
+		return s.reply(msg, map[string]any{
+			"type": "send_ok", "offset": 0,
+		})
+	}
+
+	offset, err := s.append(context.Background(), req.Key, req.Msg)
+	if err != nil {
+		// We were unable to durably append. Do not acknowledge the write;
+		// just log it (the client will time out and record an :info).
+		fmt.Fprintf(os.Stderr, "send %q failed: %v\n", req.Key, err)
+		return nil
+	}
+
+	return s.reply(msg, map[string]any{"type": "send_ok", "offset": offset})
+}
+
+func (s *server) handlePoll(msg maelstrom.Message) error {
+	var req struct {
+		Offsets map[string]float64 `json:"offsets"`
+	}
+	if err := json.Unmarshal(msg.Body, &req); err != nil {
+		return s.reply(msg, map[string]any{"type": "poll_ok", "msgs": map[string]any{}})
+	}
+
+	ctx := context.Background()
+
+	// Multi-log polls only happen when a consumer is (re)assigned several
+	// logs at once. Give in-flight appends a moment to settle first.
+	if len(req.Offsets) > 1 {
+		time.Sleep(multiKeyPollDelay)
+	}
+
+	msgs := make(map[string]any, len(req.Offsets))
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	for _, key := range sortedKeys(req.Offsets) {
+		wg.Add(1)
+		go func(key string) {
+			defer wg.Done()
+			pairs, ok := s.pollKey(ctx, key, int64(req.Offsets[key]))
+			if !ok {
+				return
+			}
+			mu.Lock()
+			msgs[key] = pairs
+			mu.Unlock()
+		}(key)
+	}
+	wg.Wait()
+
+	return s.reply(msg, map[string]any{"type": "poll_ok", "msgs": msgs})
+}
+
+func (s *server) handleCommitOffsets(msg maelstrom.Message) error {
+	var req struct {
+		Offsets map[string]float64 `json:"offsets"`
+	}
+	if err := json.Unmarshal(msg.Body, &req); err != nil {
+		return s.reply(msg, map[string]any{"type": "commit_offsets_ok"})
+	}
+
+	ctx := context.Background()
+	var wg sync.WaitGroup
+	for key, off := range req.Offsets {
+		wg.Add(1)
+		go func(key string, off int64) {
+			defer wg.Done()
+			s.commitOffset(ctx, key, off)
+		}(key, int64(off))
+	}
+	wg.Wait()
+
+	return s.reply(msg, map[string]any{"type": "commit_offsets_ok"})
+}
+
+func (s *server) handleListCommittedOffsets(msg maelstrom.Message) error {
+	var req struct {
+		Keys []string `json:"keys"`
+	}
+	if err := json.Unmarshal(msg.Body, &req); err != nil {
+		return s.reply(msg, map[string]any{"type": "list_committed_offsets_ok", "offsets": map[string]any{}})
+	}
+
+	ctx := context.Background()
+	offsets := make(map[string]any, len(req.Keys))
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	for _, key := range req.Keys {
+		wg.Add(1)
+		go func(key string) {
+			defer wg.Done()
+			cur, err := s.readRaw(ctx, commitKeyPrefix+key)
+			if err != nil {
+				return // nothing committed for this key: omit it
+			}
+			var v float64
+			if err := json.Unmarshal(cur, &v); err != nil {
+				return
+			}
+			mu.Lock()
+			offsets[key] = int64(v)
+			mu.Unlock()
+		}(key)
+	}
+	wg.Wait()
+
+	return s.reply(msg, map[string]any{"type": "list_committed_offsets_ok", "offsets": offsets})
+}
+
+// ------------------------------------------------------------------- logic --
+
+// append adds val to the end of key's log, returning the offset it was given.
+func (s *server) append(ctx context.Context, key string, val json.RawMessage) (int64, error) {
+	lk := logKeyPrefix + key
+
+	for {
+		// Read the current log, treating a missing log as an empty one.
+		cur, rerr := s.readRaw(ctx, lk)
+		if rerr != nil && maelstrom.ErrorCode(rerr) != maelstrom.KeyDoesNotExist {
+			return 0, rerr
+		}
+
+		var from any
+		var elems []json.RawMessage
+		if cur != nil {
+			if err := json.Unmarshal(cur, &elems); err != nil {
+				return 0, fmt.Errorf("corrupt log %q: %w", lk, err)
+			}
+			from = json.RawMessage(cur)
+		}
+
+		next := make([]json.RawMessage, 0, len(elems)+1)
+		next = append(next, elems...)
+		next = append(next, val)
+
+		// Claim the next offset by swapping in the extended log. The first
+		// append creates the log; concurrent appends fail the cas and retry.
+		casErr := s.kv.CompareAndSwap(ctx, lk, from, next, true)
+		if casErr == nil {
+			return int64(len(next) - 1), nil
+		}
+		if maelstrom.ErrorCode(casErr) != maelstrom.PreconditionFailed {
+			return 0, casErr
+		}
+
+		// Somebody else appended first; try again with their value.
+		time.Sleep(casRetryPause)
+	}
+}
+
+// pollKey returns the [offset, msg] pairs of key's log starting at the first
+// offset >= start. The second return value is false if there is nothing to
+// return for this key.
+func (s *server) pollKey(ctx context.Context, key string, start int64) ([]any, bool) {
+	cur, err := s.readRaw(ctx, logKeyPrefix+key)
+	if err != nil {
+		// No messages (or an unreadable log): leave this key out.
+		return nil, false
+	}
+	var elems []json.RawMessage
+	if err := json.Unmarshal(cur, &elems); err != nil {
+		return nil, false
+	}
+	if start < 0 {
+		start = 0
+	}
+	if start >= int64(len(elems)) {
+		return nil, false
+	}
+
+	pairs := make([]any, 0, int64(len(elems))-start)
+	for i := start; i < int64(len(elems)); i++ {
+		pairs = append(pairs, []any{i, elems[i]})
+	}
+	return pairs, true
+}
+
+// commitOffset records that a consumer has finished reading up to (and
+// including) offset in key's log. Committed offsets only ever advance.
+func (s *server) commitOffset(ctx context.Context, key string, off int64) {
+	ck := commitKeyPrefix + key
+
+	for attempt := 0; ; attempt++ {
+		cur, err := s.readRaw(ctx, ck)
+		if err == nil {
+			var v float64
+			if json.Unmarshal(cur, &v) == nil && int64(v) >= off {
+				return // already committed at least this far
+			}
+			// Advance it.
+			if s.kv.CompareAndSwap(ctx, ck, json.RawMessage(cur), off, true) == nil {
+				return
+			}
+		} else {
+			// Not committed yet (or unreadable): try to create it. The cas
+			// still verifies the key's state, so this is safe even if the
+			// read failed for some other reason.
+			if maelstrom.ErrorCode(err) == maelstrom.KeyDoesNotExist {
+				if s.kv.CompareAndSwap(ctx, ck, nil, off, true) == nil {
+					return
+				}
+			}
+		}
+
+		if attempt > 100000 {
+			return // don't spin forever
+		}
+		time.Sleep(casRetryPause)
+	}
+}
+
+// ---------------------------------------------------------------- plumbing --
+
+// readRaw reads a key from the kv service, returning its value as raw JSON.
+// Returns an error (with code KeyDoesNotExist) if the key does not exist.
+func (s *server) readRaw(ctx context.Context, key string) (json.RawMessage, error) {
+	resp, err := s.node.SyncRPC(ctx, kvService, map[string]any{"type": "read", "key": key})
+	if err != nil {
+		return nil, err
+	}
+	var body struct {
+		Value json.RawMessage `json:"value"`
+	}
+	if err := json.Unmarshal(resp.Body, &body); err != nil {
+		return nil, err
+	}
+	if len(body.Value) == 0 {
+		return nil, errors.New("malformed read_ok response")
+	}
+	return body.Value, nil
+}
+
+// reply sends a response to a request, without the library's extra
+// marshal/unmarshal round trip.
+func (s *server) reply(req maelstrom.Message, body map[string]any) error {
+	var reqBody struct {
+		MsgID int64 `json:"msg_id"`
+	}
+	if err := json.Unmarshal(req.Body, &reqBody); err != nil {
+		return err
+	}
+	body["in_reply_to"] = reqBody.MsgID
+	return s.node.Send(req.Src, body)
+}
+
+func sortedKeys(m map[string]float64) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
 }

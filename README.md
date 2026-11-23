@@ -12,7 +12,7 @@ then runs each program as a cluster, cuts the network apart, and checks every an
 
 ## 📊 Results (November 2026)
 
-<img src="results/pass-k-by-model.svg" alt="pass^1 and pass^2 by model: MiniMax M3.1 Flash 1.00 and 1.00, DeepSeek V4.1 Flash 1.00 and 1.00, DeepSeek V4 Pro 0.93 and 0.86, Inkling 0.80 and 0.71, GLM-5.3 0.77 and 0.67" width="720">
+<img src="results/pass-k-by-model.svg" alt="pass^1 and pass^2 by model: MiniMax M3.1 Flash 1.00 and 1.00, DeepSeek V4.1 Flash 1.00 and 1.00, DeepSeek V4 Pro 1.00 and 1.00 with its cut-off attempts rerun at 64k (0.93 and 0.86 at 16k), GLM-5.3 1.00 and 1.00 with its cut-off attempts rerun at 64k (0.77 and 0.67 at 16k), Inkling 0.80 and 0.71" width="720">
 
 Five large open-weights models, 15 tasks, 2 attempts at each, all called on Together AI.
 
@@ -20,18 +20,22 @@ Five large open-weights models, 15 tasks, 2 attempts at each, all called on Toge
 |---|---|---|---|---|
 | **MiniMax M3.1 Flash** (428B MoE, 23B active) | **1.00** | **1.00** | 30 / 30 | — |
 | **DeepSeek V4.1 Flash 1017** (552B MoE) | **1.00** | **1.00** | 30 / 30 | — |
-| DeepSeek V4 Pro 0813 (1.6T MoE, 49B active) | 0.93 | 0.86 | 27 / 29 | reply cut off before any code 2 |
+| **DeepSeek V4 Pro 0813** (1.6T MoE, 49B active) | **1.00** | **1.00** | 29 / 29 | — |
+| ↳ at the 16k reply limit | 0.93 | 0.86 | 27 / 29 | reply cut off before any code 2 |
+| **GLM-5.3** | **1.00** | **1.00** | 30 / 30 | — |
+| ↳ at the 16k reply limit | 0.77 | 0.67 | 23 / 30 | reply cut off before finishing 7 |
 | Inkling (975B MoE, 41B active) | 0.80 | 0.71 | 24 / 29 | `crashed` 2 · `fails-under-faults` 1 · `fails-without-faults` 1 · `doesnt-build` 1 |
-| GLM-5.3 | 0.77 | 0.67 | 23 / 30 | reply cut off before finishing 7 |
+
+Every model first ran with replies capped at 16,000 output tokens. The 9 attempts cut off at that limit, all DeepSeek V4 Pro's and GLM-5.3's, were then run again with a 64,000-token limit, and the bold rows count those reruns in place of the cut-off attempts.
 
 No attempt by any model failed as `too-slow`: every program that worked also stayed within the message and latency targets.
 
-- **Two models were perfect.** MiniMax M3.1 Flash and DeepSeek V4.1 Flash passed all 30 attempts, including the Kafka-style logs and the transactions that must stay available through a network split. Both ran Maelstrom more often while they worked (a median of 3 to 3.5 runs an attempt, against 2 for Inkling and DeepSeek V4 Pro).
-- **When DeepSeek V4 Pro and GLM-5.3 finished, they were right.** Every one of their 9 failures is a reply that hit the harness's limit of 16,000 output tokens per reply, almost always on the very first reply, before any code existed. GLM-5.3 reasons at its maximum effort by default. Every program either model actually finished passed.
+- **Four models were perfect.** MiniMax M3.1 Flash and DeepSeek V4.1 Flash passed all 30 attempts at the 16k limit, including the Kafka-style logs and the transactions that must stay available through a network split. DeepSeek V4 Pro and GLM-5.3 passed every attempt once their replies had room.
+- **The reply limit decided two rankings.** All 9 of DeepSeek V4 Pro's and GLM-5.3's failures at 16k were replies cut off at the limit, 8 of them before any code existed; GLM-5.3 reasons at its maximum effort by default. Run again with a 64,000-token limit, all 9 passed. A reasoning model needs room to think, and a harness that doesn't give it measures the limit, not the model.
 - **Only Inkling wrote wrong code.** Its 5 failures are real distributed systems bugs: an update sent once and never retried, so a network split loses it; a map written by concurrent handlers with no lock, the likely cause of a node crash; and a tool call written as plain text, which ended an attempt before any code.
-- **The tasks are near their ceiling.** With two models at 30 of 30, these 15 tasks no longer separate the best open models. Harder tasks are the next step.
+- **The tasks are at their ceiling.** With four models at 1.00, these 15 tasks no longer separate the best open models. Harder tasks are the next step.
 
-The full write-up, with each failure traced through its transcript, is in **[RESULTS.md](RESULTS.md)**. Every attempt's results line, transcript and final code are in [`results/`](results/), and `results/report.txt` has the per-task tables.
+The full write-up, with each failure traced through its transcript, is in **[RESULTS.md](RESULTS.md)**. Every attempt's results line, transcript and final code are in [`results/`](results/). `results/report.txt` has the per-task tables at the 16k limit, and `results/report-64k.txt` has them for DeepSeek V4 Pro and GLM-5.3 with their cut-off attempts rerun.
 
 <details>
 <summary><b>How this run was done</b></summary>
@@ -39,7 +43,7 @@ The full write-up, with each failure traced through its transcript, is in **[RES
 - Each model × task ran as its own GitHub Actions job. The agent and Maelstrom ran on the runner; the model was called on Together AI, as served there.
 - 2 attempts per task, not the default 5. pass^2 is the most these numbers support.
 - 2 attempts are left out as harness errors, not failures: one DeepSeek V4 Pro attempt whose connection to Together dropped mid-reply on every retry, and one Inkling attempt Maelstrom couldn't reach a verdict on. pass^2 for those two models covers the 14 tasks with two scored attempts.
-- Every model got the same limits: the task's step and time budget, and 16,000 output tokens per reply.
+- Every model got the same limits: the task's step and time budget, and 16,000 output tokens per reply. Attempts cut off at that limit were rerun once with `distsys-eval run --redo truncated` and `AGENT_MAX_OUTPUT_TOKENS=64000`; their results are in `results/<model>-64k/`, beside the untouched 16k results.
 - At Together's list prices, with no prompt caching, the five runs come to about $120 in all: GLM-5.3 $46, DeepSeek V4 Pro $36, Inkling $22, DeepSeek V4.1 Flash $14, MiniMax M3.1 Flash $6. Together's caching of repeated prompts can bring the bill well below that.
 - The tasks' compiled binaries and Maelstrom's raw output aren't committed.
 
