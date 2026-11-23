@@ -1,0 +1,4 @@
+Warning: protocol #'clojure.core.matrix.protocols/PMathsFunctions is overwriting function abs
+WARNING: abs already refers to: #'clojure.core/abs in namespace: clojure.core.matrix.protocols, being replaced by: #'clojure.core.matrix.protocols/abs
+WARNING: abs already refers to: #'clojure.core/abs in namespace: clojure.core.matrix.dataset, being replaced by: #'clojure.core.matrix/abs
+WARNING: abs already refers to: #'clojure.core.matrix/abs in namespace: mikera.vectorz.matrix-api, being replaced by: #'clojure.core/abs

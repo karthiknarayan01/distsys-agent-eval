@@ -1,344 +1,318 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"strconv"
+	"log"
 	"sync"
 	"time"
 
 	maelstrom "github.com/jepsen-io/maelstrom/demo/go"
 )
 
-// A timestamp is a Lamport counter plus the originating node, which makes it
-// globally unique.  [(counter, node)] is ordered lexicographically.
-type Timestamp struct {
-	Counter int64  `json:"counter"`
-	Node    string `json:"node"`
+// A versioned register value.
+//
+// Writes are stamped with a Lamport timestamp (plus the node index as a
+// deterministic tie-breaker) so that replicas can merge concurrently written
+// values with a last-writer-wins rule: a delayed, retried or duplicated
+// replication message never clobbers a newer value.
+type wval struct {
+	val  int64
+	ts   uint64
+	node int
 }
 
-func (a Timestamp) Less(b Timestamp) bool {
-	if a.Counter != b.Counter {
-		return a.Counter < b.Counter
+// newer reports whether a strictly supersedes b.
+func newer(a, b wval) bool {
+	if a.ts != b.ts {
+		return a.ts > b.ts
 	}
-	return a.Node < b.Node
+	return a.node > b.node
 }
 
-type Register struct {
-	Value any       `json:"value"`
-	TS    Timestamp `json:"ts"`
+// entry is the wire representation of one replicated key/value pair.
+type entry struct {
+	K  int64  `json:"k"`
+	V  int64  `json:"v"`
+	Ts uint64 `json:"ts"`
+	N  int    `json:"n"`
 }
 
-// TxnPlus is a completed transaction together with its timestamp.  The
-// remote node only needs the writes, but keeping the completed txn makes the
-// replication protocol easy to inspect and mirrors the standard HAT design.
-type TxnPlus struct {
-	TS  Timestamp `json:"ts"`
-	Txn [][]any   `json:"txn"`
+// flight is a batch of writes which has been shipped to the peer but not yet
+// acknowledged. Unacknowledged batches are merged back into the pending pool
+// and resent, which is what lets writes made during a partition reach the other
+// node once the network heals.
+type flight struct {
+	writes []entry
+	sentAt time.Time
 }
 
-type Store struct {
-	mu      sync.Mutex
-	nodeID  string
-	lamport int64
-	kv      map[string]Register
+// mop is a single micro-operation of a transaction.
+type mop struct {
+	f string
+	k int64
+	v int64
 }
 
-func NewStore() *Store {
-	return &Store{kv: make(map[string]Register)}
-}
-
-func (s *Store) SetNodeID(id string) {
-	s.mu.Lock()
-	s.nodeID = id
-	s.mu.Unlock()
-}
-
-func keyID(v any) string {
-	switch x := v.(type) {
-	case json.Number:
-		return "n:" + x.String()
-	case string:
-		return "s:" + x
-	case float64:
-		return "n:" + strconv.FormatFloat(x, 'g', -1, 64)
-	case float32:
-		return "n:" + strconv.FormatFloat(float64(x), 'g', -1, 32)
-	case int:
-		return "n:" + strconv.Itoa(x)
-	case int64:
-		return "n:" + strconv.FormatInt(x, 10)
-	case nil:
-		return "nil"
-	default:
-		b, _ := json.Marshal(v)
-		return "j:" + string(b)
+func (m *mop) UnmarshalJSON(data []byte) error {
+	var arr []json.RawMessage
+	if err := json.Unmarshal(data, &arr); err != nil {
+		return err
 	}
-}
-
-// Transact executes a transaction atomically against the local state.  Writes
-// are buffered until the end so no other transaction can observe an
-// intermediate write.  Reads before a write in the same transaction see the
-// committed local state; reads after a write see the transaction's own value.
-func (s *Store) Transact(ops [][]any) (result [][]any, tp TxnPlus) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.lamport++
-	ts := Timestamp{Counter: s.lamport, Node: s.nodeID}
-
-	result = make([][]any, len(ops))
-	overlay := make(map[string]any)
-	writes := make(map[string]any)
-
-	for i, raw := range ops {
-		if len(raw) < 3 {
-			result[i] = raw
-			continue
-		}
-		f, _ := raw[0].(string)
-		k := keyID(raw[1])
-		switch f {
-		case "r":
-			v, ok := overlay[k]
-			if !ok {
-				if reg, exists := s.kv[k]; exists {
-					v = reg.Value
-				}
-			}
-			result[i] = []any{"r", raw[1], v}
-		case "w":
-			val := raw[2]
-			overlay[k] = val
-			writes[k] = val
-			result[i] = []any{"w", raw[1], val}
-		default:
-			result[i] = raw
+	if len(arr) != 3 {
+		return fmt.Errorf("micro-op must have 3 elements, got %d", len(arr))
+	}
+	if err := json.Unmarshal(arr[0], &m.f); err != nil {
+		return err
+	}
+	if err := json.Unmarshal(arr[1], &m.k); err != nil {
+		return err
+	}
+	if string(arr[2]) != "null" {
+		if err := json.Unmarshal(arr[2], &m.v); err != nil {
+			return err
 		}
 	}
-
-	for k, v := range writes {
-		cur, exists := s.kv[k]
-		if !exists || cur.TS.Less(ts) {
-			s.kv[k] = Register{Value: v, TS: ts}
-		}
-	}
-
-	tp = TxnPlus{TS: ts, Txn: result}
-	return result, tp
-}
-
-// ApplyRemote applies the final writes of a replicated transaction.  The
-// whole transaction is applied under one lock, so local reads can never see a
-// partially applied transaction.
-func (s *Store) ApplyRemote(tp TxnPlus) {
-	final := make(map[string]any)
-	for _, raw := range tp.Txn {
-		if len(raw) < 3 {
-			continue
-		}
-		if f, _ := raw[0].(string); f == "w" {
-			final[keyID(raw[1])] = raw[2]
-		}
-	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if s.lamport <= tp.TS.Counter {
-		s.lamport = tp.TS.Counter + 1
-	}
-	for k, v := range final {
-		cur, exists := s.kv[k]
-		if !exists || cur.TS.Less(tp.TS) {
-			s.kv[k] = Register{Value: v, TS: tp.TS}
-		}
-	}
-}
-
-type pendingTxn struct {
-	tp       TxnPlus
-	lastSent time.Time
-}
-
-type Replicator struct {
-	mu      sync.Mutex
-	pending map[Timestamp]*pendingTxn
-	node    *maelstrom.Node
-	started bool
-}
-
-func NewReplicator(n *maelstrom.Node) *Replicator {
-	return &Replicator{
-		pending: make(map[Timestamp]*pendingTxn),
-		node:    n,
-	}
-}
-
-func (r *Replicator) Add(tp TxnPlus) {
-	r.mu.Lock()
-	r.pending[tp.TS] = &pendingTxn{tp: tp}
-	r.mu.Unlock()
-}
-
-func (r *Replicator) Ack(tss []Timestamp) {
-	r.mu.Lock()
-	for _, ts := range tss {
-		delete(r.pending, ts)
-	}
-	r.mu.Unlock()
-}
-
-func (r *Replicator) Start() {
-	r.mu.Lock()
-	if r.started {
-		r.mu.Unlock()
-		return
-	}
-	r.started = true
-	r.mu.Unlock()
-	go r.loop()
+	return nil
 }
 
 const (
-	tickInterval     = 20 * time.Millisecond
-	retryAfter       = 120 * time.Millisecond
-	maxBatch         = 500
-	maxBatchesPerRun = 8
+	// Maximum number of key/value pairs in a single replication message. This
+	// keeps every message far below Maelstrom's 64KiB line limit.
+	maxBatch = 100
+	// How often the replication loop runs.
+	tickInterval = 25 * time.Millisecond
+	// How long to wait for an acknowledgement before retrying a batch.
+	ackTimeout = 250 * time.Millisecond
 )
 
-func (r *Replicator) loop() {
-	ticker := time.NewTicker(tickInterval)
-	defer ticker.Stop()
-	for range ticker.C {
-		r.flush()
-	}
-}
+type server struct {
+	n *maelstrom.Node
 
-func (r *Replicator) flush() {
-	self := r.node.ID()
-	if self == "" {
-		return
-	}
-	var peers []string
-	for _, id := range r.node.NodeIDs() {
-		if id != self {
-			peers = append(peers, id)
-		}
-	}
-	if len(peers) == 0 {
-		return
-	}
-
-	now := time.Now()
-	for _, dest := range peers {
-		for batchNo := 0; batchNo < maxBatchesPerRun; batchNo++ {
-			batch := make([]TxnPlus, 0, maxBatch)
-			r.mu.Lock()
-			for _, p := range r.pending {
-				if now.Sub(p.lastSent) >= retryAfter {
-					batch = append(batch, p.tp)
-					p.lastSent = now
-					if len(batch) >= maxBatch {
-						break
-					}
-				}
-			}
-			r.mu.Unlock()
-
-			if len(batch) == 0 {
-				break
-			}
-			// If the message is lost, it remains pending and is retried
-			// after retryAfter.
-			_ = r.node.Send(dest, map[string]any{
-				"type": "replicate",
-				"txns": batch,
-			})
-		}
-	}
-}
-
-type txnRequest struct {
-	Type  string  `json:"type"`
-	MsgID int     `json:"msg_id"`
-	Txn   [][]any `json:"txn"`
-}
-
-type txnResponse struct {
-	Type string  `json:"type"`
-	Txn  [][]any `json:"txn"`
-}
-
-type replicateRequest struct {
-	Type string    `json:"type"`
-	Txns []TxnPlus `json:"txns"`
-}
-
-type replicateAck struct {
-	Type string      `json:"type"`
-	TSS  []Timestamp `json:"tss"`
-}
-
-type ackBody struct {
-	Type string      `json:"type"`
-	TSS  []Timestamp `json:"tss"`
-}
-
-func decodeUseNumber(data []byte, out any) error {
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	return dec.Decode(out)
+	mu       sync.Mutex
+	state    map[int64]wval
+	clock    uint64
+	me       int
+	peer     string
+	pending  map[int64]wval // committed locally, not yet acked by the peer
+	inflight map[uint64]*flight
+	seq      uint64
+	started  bool
 }
 
 func main() {
-	n := maelstrom.NewNode()
-	store := NewStore()
-	replicator := NewReplicator(n)
+	s := &server{
+		n:        maelstrom.NewNode(),
+		state:    make(map[int64]wval),
+		pending:  make(map[int64]wval),
+		inflight: make(map[uint64]*flight),
+	}
 
-	n.Handle("init", func(msg maelstrom.Message) error {
-		store.SetNodeID(n.ID())
-		replicator.Start()
-		return nil
+	s.n.Handle("init", s.handleInit)
+	s.n.Handle("txn", s.handleTxn)
+	s.n.Handle("replicate", s.handleReplicate)
+	s.n.Handle("replicate_ok", s.handleReplicateOK)
+
+	if err := s.n.Run(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (s *server) handleInit(msg maelstrom.Message) error {
+	ids := s.n.NodeIDs()
+	s.mu.Lock()
+	s.me = 0
+	s.peer = ""
+	for i, id := range ids {
+		if id == s.n.ID() {
+			s.me = i
+		} else if s.peer == "" {
+			s.peer = id
+		}
+	}
+	started := s.started
+	s.started = true
+	s.mu.Unlock()
+
+	if !started {
+		go s.replicateLoop()
+	}
+	return nil
+}
+
+// handleTxn executes a transaction.
+//
+// All the micro-operations of a transaction are applied to the local store
+// while holding the store lock, so that no other transaction on this node can
+// observe a half-applied transaction, and no other transaction can read a write
+// which this one subsequently overwrites. Only the final value this transaction
+// gives each key is ever published to the other node - intermediate values such
+// as the 6 in a "w 6, w 7" pair never leave this node - and publication happens
+// only after the transaction has been answered. That is what keeps the store
+// read-committed: nobody can read an intermediate or uncommitted write.
+//
+// Nothing here waits on the other node, so every transaction is answered.
+func (s *server) handleTxn(msg maelstrom.Message) error {
+	var body struct {
+		Txn []mop `json:"txn"`
+	}
+	if err := json.Unmarshal(msg.Body, &body); err != nil {
+		return err
+	}
+
+	out := make([][]any, 0, len(body.Txn))
+	written := make(map[int64]wval)
+
+	s.mu.Lock()
+	s.clock++
+	ts := s.clock
+	for _, op := range body.Txn {
+		switch op.f {
+		case "r":
+			if cur, ok := s.state[op.k]; ok {
+				out = append(out, []any{"r", op.k, cur.val})
+			} else {
+				out = append(out, []any{"r", op.k, nil})
+			}
+		case "w":
+			// Applied unconditionally: this transaction always observes its own
+			// writes. A concurrent remote version may be merged over the top
+			// later, which read-committed permits.
+			v := wval{val: op.v, ts: ts, node: s.me}
+			s.state[op.k] = v
+			written[op.k] = v
+			out = append(out, []any{"w", op.k, op.v})
+		default:
+			// Unknown micro-op: echo it back untouched.
+			out = append(out, []any{op.f, op.k, nil})
+		}
+	}
+	s.mu.Unlock()
+
+	err := s.n.Reply(msg, map[string]any{
+		"type": "txn_ok",
+		"txn":  out,
 	})
 
-	n.Handle("txn", func(msg maelstrom.Message) error {
-		var req txnRequest
-		if err := decodeUseNumber(msg.Body, &req); err != nil {
-			return fmt.Errorf("decode txn: %w", err)
+	// Commit: now (and only now) the transaction's final writes become eligible
+	// for replication to the other node.
+	if len(written) > 0 {
+		s.mu.Lock()
+		for k, v := range written {
+			if cur, ok := s.pending[k]; !ok || newer(v, cur) {
+				s.pending[k] = v
+			}
 		}
-		result, tp := store.Transact(req.Txn)
-		replicator.Add(tp)
-		return n.Reply(msg, txnResponse{Type: "txn_ok", Txn: result})
-	})
+		s.mu.Unlock()
+	}
 
-	n.Handle("replicate", func(msg maelstrom.Message) error {
-		var req replicateRequest
-		if err := decodeUseNumber(msg.Body, &req); err != nil {
-			return fmt.Errorf("decode replicate: %w", err)
-		}
-		tss := make([]Timestamp, 0, len(req.Txns))
-		for _, tp := range req.Txns {
-			store.ApplyRemote(tp)
-			tss = append(tss, tp.TS)
-		}
-		if msg.Src != "" && msg.Src != n.ID() {
-			_ = n.Send(msg.Src, replicateAck{Type: "replicate_ack", TSS: tss})
-		}
-		return nil
-	})
+	return err
+}
 
-	n.Handle("replicate_ack", func(msg maelstrom.Message) error {
-		var body ackBody
-		if err := decodeUseNumber(msg.Body, &body); err != nil {
-			return fmt.Errorf("decode replicate_ack: %w", err)
-		}
-		replicator.Ack(body.TSS)
-		return nil
-	})
+// handleReplicate merges a batch of writes from the other node and acknowledges
+// it. Merging is last-writer-wins on (lamport timestamp, node index) and
+// idempotent, so duplicate or reordered deliveries are harmless.
+func (s *server) handleReplicate(msg maelstrom.Message) error {
+	var body struct {
+		Seq    uint64  `json:"seq"`
+		Writes []entry `json:"writes"`
+	}
+	if err := json.Unmarshal(msg.Body, &body); err != nil {
+		return err
+	}
 
-	if err := n.Run(); err != nil {
-		panic(err)
+	s.mu.Lock()
+	for _, e := range body.Writes {
+		in := wval{val: e.V, ts: e.Ts, node: e.N}
+		if cur, ok := s.state[e.K]; !ok || newer(in, cur) {
+			s.state[e.K] = in
+		}
+		if e.Ts > s.clock {
+			s.clock = e.Ts
+		}
+	}
+	s.mu.Unlock()
+
+	return s.n.Send(msg.Src, map[string]any{
+		"type": "replicate_ok",
+		"seq":  body.Seq,
+	})
+}
+
+func (s *server) handleReplicateOK(msg maelstrom.Message) error {
+	var body struct {
+		Seq uint64 `json:"seq"`
+	}
+	if err := json.Unmarshal(msg.Body, &body); err != nil {
+		return err
+	}
+
+	s.mu.Lock()
+	delete(s.inflight, body.Seq)
+	s.mu.Unlock()
+	return nil
+}
+
+// replicateLoop ships committed local writes to the other node. Each tick it
+// retires unacknowledged batches back into the pending pool and sends one fresh
+// batch. Batches are small, so no message approaches the line-length limit;
+// unacknowledged work is retried, so nothing is lost when a partition drops
+// messages, and it all lands once the network heals.
+func (s *server) replicateLoop() {
+	ticker := time.NewTicker(tickInterval)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		now := time.Now()
+
+		s.mu.Lock()
+		peer := s.peer
+		if peer == "" {
+			s.mu.Unlock()
+			continue
+		}
+
+		// Retire unacknowledged batches: put their writes back into the
+		// pending pool (keeping the newest version per key) so they are resent.
+		for seq, f := range s.inflight {
+			if now.Sub(f.sentAt) < ackTimeout {
+				continue
+			}
+			for _, e := range f.writes {
+				in := wval{val: e.V, ts: e.Ts, node: e.N}
+				if cur, ok := s.pending[e.K]; !ok || newer(in, cur) {
+					s.pending[e.K] = in
+				}
+			}
+			delete(s.inflight, seq)
+		}
+
+		// Ship one batch of pending writes.
+		var payload map[string]any
+		if len(s.pending) > 0 {
+			batch := make([]entry, 0, maxBatch)
+			for k, v := range s.pending {
+				batch = append(batch, entry{K: k, V: v.val, Ts: v.ts, N: v.node})
+				delete(s.pending, k)
+				if len(batch) >= maxBatch {
+					break
+				}
+			}
+			seq := s.seq
+			s.seq++
+			s.inflight[seq] = &flight{writes: batch, sentAt: now}
+			payload = map[string]any{
+				"type":   "replicate",
+				"seq":    seq,
+				"writes": batch,
+			}
+		}
+		s.mu.Unlock()
+
+		if payload != nil {
+			if err := s.n.Send(peer, payload); err != nil {
+				log.Printf("replicate send: %v", err)
+			}
+		}
 	}
 }
